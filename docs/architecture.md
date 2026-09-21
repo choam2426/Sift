@@ -1,44 +1,15 @@
-# Falsify — 컨셉 및 초안 구조
+# Falsify — 아키텍처
 
-> 상태: 아이디어 논의 스냅샷 (2026-09-21). 확정 아님. 미결정은 별도 표기.
-> 가칭: Falsify — "Instead of looking for unsafe code, find unsafe assumptions."
+> 파이프라인 설계 상세 (초안 2026-09-21 + 이후 결정 반영).
+> 배경/동기/thesis → [제품](product.md).
+> 관련: [평가](eval.md) · [결정 로그](decisions.md) · [문헌 조사](research/2026-09-21-pipeline-lit-review.md) · [Jev 실측](specs/jev.md)
 
-## 1. 컨셉
+## 1. 전제 (요약)
 
-### 1.1 Thesis
-
-Memory-safe 환경에서도 살아남는 취약점은 **메모리 커럽션이 아니라
-logic/security invariant 위반**이다. 개발자가 당연하다고 믿은 암묵적 전제를
-깨는 입력/호출 순서를 자동으로 찾아낸다.
-
-연구식 표현: Automated security invariant discovery and falsification
-for memory-safe backend applications.
-
-### 1.2 핵심 분업: Jev + LLM
-
-단일 frontier LLM에 코드를 통째로 주는 대신, 인간 분석가의 작업 흐름을
-자동화한다:
-
-```text
-분석가 recon (공격 표면 파악)      → static extractor
-분석가 triage (스치듯 보고 선별)    → Jev (수백 ms짜리 glance)
-분석가 deep dive (전제 추출)        → LLM invariant 생성
-분석가 PoC (깨지는 입력 구성)       → falsification (반례 실행)
-```
-
-- **Jev = recall 담당**: 싸고 빠르게 넓게 본다. 놓치지 않는 게 목표.
-- **LLM = precision 담당**: 좁혀진 후보만 깊게 본다. Invariant 명시 강제.
-- 설계 원리는 인간 모방이 아니라 **"싼 판단 → 비싼 추론" 분업**.
-  인간의 주의력 제약을 기계가 따라할 필요는 없다 (B안 참조).
-
-### 1.3 Jev란 (2026-09-15 출시)
-
-- TypeSafe AI (ex-OpenAI Diogo Almeida)의 "System One" 모델. 텍스트를
-  생성하지 않고 typed decision + calibrated probability만 반환.
-- 입력: state + 미리 선언한 typed 질문. 출력: 선택지/점수/yes-no 확률.
-- 스펙(벤더 발표): 70~500ms, 입력 $0.042/MTok, 출력 무료.
-- API: `POST https://api.typesafe.ai/v1/systemone`
-- 출시 6일차라 독립 검증 거의 없음. Calibration 주장은 RQ에서 검증 대상.
+- Jev = recall 담당 triage (싼 판단), LLM = precision 담당 deep dive (비싼 추론).
+  분업 근거는 [제품](product.md).
+- Jev = TypeSafe System One 모델. `POST .../v1/systemone`에 state + typed
+  질문 → 선택지/점수/확률 반환. 측정치: [Jev 실측](specs/jev.md).
 
 ## 2. 일반화된 분석 흐름 (인간 기준)
 
@@ -124,12 +95,13 @@ for memory-safe backend applications.
 4. **측정 후크 내장**: 필터마다 audit sampling 슬롯. 재는 장치 없이
    파이프라인을 만들지 않는다.
 
-### 3.3 타깃 취약점 (초기 범위)
+### 3.3 타깃 취약점 (유형별)
 
-authorization bypass, cross-tenant isolation failure,
-state-machine/workflow bypass, replay/idempotency bug,
-cross-endpoint validation inconsistency, quota/accounting/conservation
-violation.
+초기 logic-only 범위에서 유형별 파일럿으로 확장 (D7–D9).
+Logic: authorization bypass, cross-tenant isolation, state-machine
+bypass, replay/idempotency, cross-endpoint inconsistency, conservation
+violation. Memory (C/C++): unsafe 메모리 조작 심사 대상.
+트랙별 정의는 [제품](product.md)과 [평가](eval.md) 참조.
 
 ## 4. 컴포넌트별 방향
 
@@ -176,7 +148,7 @@ LLM 지명(b)으로 확정하는 조합이 유력. LLM은 프로젝트당 몇 �
 
 ### 4.4 LLM: invariant-first
 
-"In invariant 명시 없이 취약하다는 주장 금지"가 원칙. 출력:
+"Invariant 명시 없이 취약하다는 주장 금지"가 원칙. 출력:
 
 ```text
 1. Invariant 생성 (이 코드가 지켜야 할 규칙)
@@ -218,19 +190,19 @@ D closed loop: [5] verdict → [1] 재보정. Phase 2.
 
 - **Audit sampling**: Jev가 버린 low 밴드에서 랜덤 샘플링해 LLM/사람 검증.
   없으면 recall 정의상 측정 불가. MVP 포함 필수.
-- Baseline: frontier LLM 통째로(single-LLM) vs 제안 파이프라인.
+- Baseline: [평가](eval.md)의 2단 비교군 (triage B0~B3, e2e E0~E2).
   비교축: recall, 비용, 속도.
 - 선행 측정: Jev vague-vs-specific 질문 정확도 갭 (B' 존폐 결정).
 
 ## 8. 미결정 사항
 
 1. **Invariant IR 형태**: 자연어 vs 구조화 enum/DSL. [4]-[5]의 목.
-2. **정답지**: 과거 CVE vs 인공 주입 vs 사람 라벨. RQ의 나침반.
+2. **정답지**: 결정됨 — triage=사람 라벨, e2e=기지 CVE 1차+주입 2차. ([평가](eval.md))
 3. **1차 범위**: 함수 전수 vs entry 도달만. 비용/범용성 트레이드오프.
 4. **Harness 방식**: 직접 호출 vs 서버+HTTP.
 5. **Cutoff/임계값/전파 가중치 등 파라미터 일체**: 방향 확정 후.
 6. **State inventory 확정**: 휴리스틱+LLM 조합 검증 필요.
-7. **첫 타깃 프로젝트 + 언어**: Rust부터인지, decisions 1-4 이후.
+7. **첫 타깃 프로젝트 + 언어**: 결정됨 — D9 4트랙 (Discourse/7-Zip/Kanidm/K8s-RBAC).
 
 ## 9. RQ 스케치 (초안)
 
@@ -245,6 +217,7 @@ RQ4. Jev routing으로 frontier 호출량을 줄여도 recall을 유지하는가
 ```
 
 RQ2가 병목이므로 RQ2부터 깨야 RQ3/RQ4가 의미 있음.
+Baseline/지표 상세는 [평가](eval.md).
 
 ## 10. 약한 이음새 (우선 타격 순서)
 
@@ -253,9 +226,7 @@ RQ2가 병목이므로 RQ2부터 깨야 RQ3/RQ4가 의미 있음.
 3. Invariant IR: 자연어면 자동화 불가, 구조화면 표현력 부족.
 4. Composer 품질: 묶음이 틀리면 2차 판단 무의미.
 
-## 11. 다음 단계 후보
+## 11. 다음 단계
 
-- Invariant IR 설계 ([4]와 [5] 양쪽의 목)
-- Falsify 심화 (5a 상세 + 5b 최소형)
-- 정답지/벤치마크 설계
-- Composer 내재 지표 정교화
+[제품 로드맵](product.md)과 [티켓](../../tickets/README.md)으로 이관됨.
+(구 후보 목록 삭제.)
