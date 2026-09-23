@@ -1,5 +1,5 @@
 # Toolchain. Bootstrap (once per machine): curl https://mise.run | sh
-# Then: mise install (python + uv) && make venv
+# Then: mise install (python + uv)
 [tools]
 python = "3.13"
 uv = "latest"

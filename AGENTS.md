@@ -1,31 +1,7 @@
-# AGENTS.md
+# 에이전트 작업 지침
 
-Falsify: repo in → ranked security findings out. Cheap Jev triage,
-frontier LLM deep dive, falsification. See [docs/product.md](docs/product.md).
-
-## Run
-
-Commands live in the Makefile. Start with `make help`.
-Toolchain via mise: `mise install` (python + uv),
-then `make venv` (`uv sync`).
-
-## Read before working
-
-- Product (why, direction): [docs/product.md](docs/product.md)
-- Pipeline design: [docs/architecture.md](docs/architecture.md)
-- Baselines and metrics: [docs/eval.md](docs/eval.md)
-- Past calls: [docs/decisions.md](docs/decisions.md) — log new ones here
-
-## Write where it belongs
-
-- Measurements: `docs/specs/<topic>.md`
-- Literature/background: `docs/research/YYYY-MM-DD-<slug>.md`
-- Work items: `tickets/` (see [tickets/README.md](tickets/README.md))
-- Eval inputs: `eval/labels/` (ground truth) + `eval/baselines/`
-  (frozen artifacts).
-
-## Rules
-
-- Scripts are stdlib-only (bash+curl, python3 stdlib). No new deps.
-- Secrets stay in `.env` (gitignored). Never print them.
-- Commit only when asked. Never push without being asked.
+- 제품 범위나 동작을 다루는 작업에서는 [제품 명세](docs/product.md)를 확인한다.
+- 합의되지 않은 아키텍처와 기술 선택은 제안으로 다룬다. 사용자와 결정한 뒤 확정된 내용으로 문서화한다.
+- 기존 작업 내용을 보존하고, 변경한 부분은 해당 작업에 맞게 확인한다.
+- 비밀값은 Git에 추적되는 파일이나 명령 출력에 노출하지 않는다. 로컬 비밀값은 Git에서 무시되는 `.env`에 둔다.
+- 명시적으로 요청받은 경우에만 커밋하거나 푸시한다.
