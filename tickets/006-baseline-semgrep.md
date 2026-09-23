@@ -1,6 +1,6 @@
 # 006 baseline-semgrep
 
-Status: open
+Status: done
 Depends: 001
 
 ## Context
@@ -15,5 +15,11 @@ B3 arm: off-the-shelf SAST as the "existing tool" rival.
 
 ## Done when
 
-- [ ] Ruleset + version recorded in Notes.
-- [ ] Ranked sample produced for the eval script (008).
+- [x] Ruleset + version recorded in Notes.
+- [x] Ranked sample produced for the eval script (008).
+
+## Notes
+
+- semgrep 1.177.0 (isolated `.venv-semgrep`), config `p/ruby` (44 rules).
+- 119 findings on app+lib → 116 functions hit (1.6%), 1 unmapped.
+- Sparse by nature (OSS pack). `data/mastodon.semgrep.jsonl`.

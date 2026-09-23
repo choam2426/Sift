@@ -16,11 +16,11 @@ Local tracker (no remote). One file per ticket: `NNN-slug.md`.
 
 | # | Ticket | Status |
 |---|--------|--------|
-| 001 | [extract-functions](001-extract-functions.md) | ready |
-| 002 | [jev-scorer](002-jev-scorer.md) | open |
-| 003 | [sampler](003-sampler.md) | open |
-| 004 | [labels](004-labels.md) | open |
-| 005 | [baseline-rule](005-baseline-rule.md) | open |
-| 006 | [baseline-semgrep](006-baseline-semgrep.md) | open |
-| 007 | [baseline-llm-judge](007-baseline-llm-judge.md) | open |
-| 008 | [eval-report](008-eval-report.md) | open |
+| 001 | [extract-functions](001-extract-functions.md) | done |
+| 002 | [jev-scorer](002-jev-scorer.md) | done |
+| 003 | [sampler](003-sampler.md) | done |
+| 004 | [labels](004-labels.md) | done |
+| 005 | [baseline-rule](005-baseline-rule.md) | done |
+| 006 | [baseline-semgrep](006-baseline-semgrep.md) | done |
+| 007 | [baseline-llm-judge](007-baseline-llm-judge.md) | done |
+| 008 | [eval-report](008-eval-report.md) | done |

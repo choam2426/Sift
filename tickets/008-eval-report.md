@@ -1,6 +1,6 @@
 # 008 eval-report
 
-Status: open
+Status: done
 Depends: 004, 005, 006, 007
 
 ## Context
@@ -16,5 +16,11 @@ Head-to-head on the shared labeled sample ([eval.md](../docs/eval.md)).
 
 ## Done when
 
-- [ ] One command reproduces the table from labels + arm outputs.
-- [ ] Spec doc states pass/fail per success criterion.
+- [x] One command reproduces the table from labels + arm outputs.
+- [x] Spec doc states pass/fail per success criterion.
+
+## Notes
+
+- `make eval` → [jev-eval-01.md](../docs/specs/jev-eval-01.md).
+- Verdict: 필수 PASS / 목표 PASS++ / stretch PASS.
+  P0 gate (track 1) cleared → expand to 3 tracks per D12.

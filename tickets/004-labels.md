@@ -1,6 +1,6 @@
 # 004 labels
 
-Status: open
+Status: done
 Depends: 003
 
 ## Context
@@ -17,6 +17,16 @@ Human labels are the P0 ground truth ([eval.md](../docs/eval.md)).
 
 ## Done when
 
-- [ ] Guide committed next to labels.
-- [ ] All 50 labels present with reasons.
-- [ ] Positive rate + 2 borderline cases discussed in Notes.
+- [x] Guide committed next to labels.
+- [x] All 50 labels present with reasons.
+- [x] Positive rate + 2 borderline cases discussed in Notes.
+
+## Notes
+
+- Labeled by isolated subagent (own context, blinded). File-access audit:
+  guide + review + labels template only, zero manifest/scores/data reads.
+- Positive rate 21/50 (42%).
+- Borderlines (→1 per recall rule): vote double-vote guard
+  (`VoteValidator#poll_non_multiple_and_already_voted?`), push visibility
+  (`Web::PushNotificationWorker#perform`), invite gate
+  (`User#valid_invitation?`).

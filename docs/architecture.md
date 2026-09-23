@@ -32,7 +32,7 @@
 1 Recon:    잘 됨 (정적 추출) — 기존 도구/가벼운 추출기
 2 Triage:   룰 기반까지만, 의미 기반은 갭 ← Jev 자리
 3 전제 추출: 갭 ← LLM 자리
-4 위반 탐색: 로직은 갭 ← LLM + falsifier 자리
+4 위반 탐색: 갭 ← LLM + falsifier 자리
 5 확증:     반자동 (PoC 구성 지원) ← harness 자리
 ```
 
@@ -52,19 +52,19 @@
   출력: scored list {함수, risk vector} → generous cutoff로 후보
          │  audit sampling → recall 추정치 (필수)
          ▼
-[Composer] logic unit 합성
+[Composer] unit 합성
   입력: CodeDB + 1차 scores + state inventory
-  출력: ranked logic units (capped, deduped, flow-ordered)
+  출력: ranked units (capped, deduped, flow-ordered)
          │
          ▼
-[2 Jev logic] 흐름 위반 — 후보만
-  판단 대상: logic unit (의미 단위, 아래 정의)
-  질문형: 검증형 ("이 슬라이스에서 auth가 강제되는가?")
-  출력: 수상 logic
+[2 Jev unit] 흐름 위반 — 후보만
+  판단 대상: unit (의미 단위, 아래 정의)
+  질문형: 검증형 ("이 흐름의 전제가 지켜지는가?")
+  출력: 수상 unit
          │
          ▼
-[3 Jev cross-logic] 일관성 — 쌍/그룹
-  판단 대상: logic unit 쌍/그룹
+[3 Jev cross-unit] 일관성 — 쌍/그룹
+  판단 대상: unit 쌍/그룹
   질문형: 비교형 ("A는 체크하는데 B는 왜 안 하나?")
   출력: 불일치 후보
          │
@@ -74,10 +74,11 @@
   출력: Invariant IR + violation scenario (구조화 강제)
          │
          ▼
-[5 Falsify] 2단
-  5a cheap: 기존 테스트와 invariant 충돌 체크 → 충돌 시 invariant 폐기
-  5b expensive: 반례를 테스트/harness로 실행 → 깨지면 finding 확정
-  출력: verdict {confirmed / refuted / inconclusive} + 증거
+[5 Falsify] agentic loop
+  step 0: 기존 테스트로 반박 시도 (거저면 여기서 끝)
+  step 1+: PoC 생성 → 실행 → 관찰 → 반복 → verdict 확정
+  출력: verdict {confirmed / refuted / inconclusive} + 증거 (PoC 포함)
+  ※ confirmed = 기계 확증 (PoC로 위반 재현). 최종 취약점 판정은 연구원.
          │
          ▼ (confirmed만)
 [Side loop] finding 증폭기 (B')
@@ -89,19 +90,17 @@
 
 1. **Funnel**: 뒤로 갈수록 집합은 좁아지고 판단은 비싸진다.
 2. **Semantic ladder**: 단계마다 판단 대상이 달라진다
-   (function → logic → cross-logic). 각 단계가 타깃 버그 클래스에 대응.
+   (function → unit → cross-unit).
 3. **Artifact contract**: 단계 사이 산출물 고정 —
-   CodeDB → scored list → logic units → Invariant IR → verdict.
+   CodeDB → scored list → units → Invariant IR → verdict.
 4. **측정 후크 내장**: 필터마다 audit sampling 슬롯. 재는 장치 없이
    파이프라인을 만들지 않는다.
 
-### 3.3 타깃 취약점 (유형별)
+### 3.3 타깃 범위
 
-초기 logic-only 범위에서 유형별 파일럿으로 확장 (D7–D9).
-Logic: authorization bypass, cross-tenant isolation, state-machine
-bypass, replay/idempotency, cross-endpoint inconsistency, conservation
-violation. Memory (C/C++): unsafe 메모리 조작 심사 대상.
-트랙별 정의는 [제품](product.md)과 [평가](eval.md) 참조.
+정적분석/리버싱으로 찾을 수 있는 모든 버그 종류 (D16).
+버그 클래스별 분기 없음 — 파이프라인 공통, 유형별 차이는
+프로필(질문셋 + 정답지 정의)로만 흡수 ([제품](product.md) Generic-by-type).
 
 ## 4. 컴포넌트별 방향
 
@@ -111,10 +110,10 @@ violation. Memory (C/C++): unsafe 메모리 조작 심사 대상.
 review unit = named callable 본문 + 껍질 {decorator, 시그니처, 호출 이름 목록}
 ```
 
-"함수 소스만"은 recall 구멍 (auth가 decorator에 있는 경우 등).
+"함수 소스만"은 recall 구멍 (전제 관련 코드가 decorator에 있는 경우 등).
 껍질은 토큰 2배 미만으로 신호 대부분 회수.
 
-### 4.2 Jev ladder (function → logic → cross-logic)
+### 4.2 Jev ladder (function → unit → cross-unit)
 
 - 1차 범위는 함수 전수와 entry 도달만 중 미결정 (§8.3 참조).
 - 단계가 깊어질수록 질문형이 탐지형 → 검증형 → 비교형으로 바뀐다.
@@ -122,7 +121,7 @@ review unit = named callable 본문 + 껍질 {decorator, 시그니처, 호출 �
 
 ### 4.3 Composer: flow extraction + bundling (핵심)
 
-Logic unit 정의: 하나의 보안 관련 동작을 함께 구현하는 함수 집합.
+Unit 정의: 하나의 보안 관련 동작을 함께 구현하는 함수 집합.
 Invariant가 붙을 만한 덩어리.
 
 핵심 통찰: 원하는 건 flow(세로: entry → … → sink)이지
@@ -131,7 +130,7 @@ embedding 클러스터링은 틀린 도구.
 
 ```text
 Phase 1 — path extraction: entry → sensitive sink beam search, risky top-K
-Phase 2 — bundling: prefix/suffix 공유 경로 병합 → flow bundle = logic unit
+Phase 2 — bundling: prefix/suffix 공유 경로 병합 → flow bundle = unit
 보조: (entry × state) cell 분할 + risk gate + size cap
 ```
 
@@ -161,8 +160,13 @@ RQ급 비교 대상이나 MVP는 invariant-first.
 
 ### 4.5 Falsify
 
-5a(기존 테스트 충돌 체크)가 방파제. 5b(반례 실행 harness)가 최고 난이도.
-Harness 방식 (handler 직접 호출 vs 서버+HTTP)은 미결정.
+LLM agentic loop. 첫 행동은 기존 테스트로 반박 시도(step 0) —
+거저로 깨지면 PoC를 짜지 않는다. 이후 PoC 생성 → 실행 → 관찰 →
+(실패 시 수정 반복) → verdict.
+Harness 방식 (직접 호출 vs 서버+HTTP)은 사전 고정 안 함, 케이스별 LLM 판단.
+연구원은 confirmed은 PoC와 함께, inconclusive는 lead로 받는다.
+완전 자동화가 목표가 아니다 — 최종적으로 취약점이 맞는지의 판정은
+연구원의 몫이며, 파이프라인은 판정 가능한 증거까지 책임진다.
 
 ## 5. 실험 변형 (코어 제외, kill 조건부)
 
@@ -199,7 +203,7 @@ D closed loop: [5] verdict → [1] 재보정. Phase 2.
 1. **Invariant IR 형태**: 자연어 vs 구조화 enum/DSL. [4]-[5]의 목.
 2. **정답지**: 결정됨 — triage=사람 라벨, e2e=기지 CVE 1차+주입 2차. ([평가](eval.md))
 3. **1차 범위**: 함수 전수 vs entry 도달만. 비용/범용성 트레이드오프.
-4. **Harness 방식**: 직접 호출 vs 서버+HTTP.
+4. **Harness 방식**: 사전 고정 안 함. 케이스별 LLM 판단 (§4.5).
 5. **Cutoff/임계값/전파 가중치 등 파라미터 일체**: 방향 확정 후.
 6. **State inventory 확정**: 휴리스틱+LLM 조합 검증 필요.
 7. **첫 타깃 프로젝트 + 언어**: 결정됨 — D9 4트랙 (Discourse/7-Zip/Kanidm/K8s-RBAC).
@@ -208,7 +212,7 @@ D closed loop: [5] verdict → [1] 재보정. Phase 2.
 
 ```text
 RQ1. Jev가 security-invariant-bearing 코드를 잘 ranking하는가?
-     (1차 recall@k + audit 기반 miss rate)
+     (1차 recall@k + audit 기반 miss rate) → track-1 Yes ([jev-eval-01](specs/jev-eval-01.md)).
 RQ2. LLM이 코드만 보고 application-specific invariant를 정확히 생성하는가?
      (valid invariant rate — 전체 파이프라인의 병목)
 RQ3. 생성된 invariant를 falsification으로 반례까지 찾을 수 있는가?
@@ -221,7 +225,7 @@ Baseline/지표 상세는 [평가](eval.md).
 
 ## 10. 약한 이음새 (우선 타격 순서)
 
-1. [4]→[5]: harness 생성이 최고 난이도. 막히면 finding이 "LLM 주장" 수준.
+1. [5]: agentic PoC loop가 최고 난이도. 막히면 finding이 "LLM 주장" 수준.
 2. [1] cutoff: 전체 recall 상한. Generous vs 비용 곡선이 RQ1 본체.
 3. Invariant IR: 자연어면 자동화 불가, 구조화면 표현력 부족.
 4. Composer 품질: 묶음이 틀리면 2차 판단 무의미.

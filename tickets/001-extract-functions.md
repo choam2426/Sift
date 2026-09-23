@@ -1,12 +1,12 @@
 # 001 extract-functions
 
-Status: ready
+Status: done
 Depends: none
 
 ## Context
 
 P0 needs every function of each target as Jev input units.
-First track only: Discourse ([D9](../docs/decisions.md)). Other tracks reuse.
+First track only: Mastodon ([D9](../docs/decisions.md)). Other tracks reuse.
 
 ## Do
 
@@ -17,6 +17,17 @@ First track only: Discourse ([D9](../docs/decisions.md)). Other tracks reuse.
 
 ## Done when
 
-- [ ] Extraction command exists and runs on Discourse checkout.
-- [ ] Function count + 3 sample rows pasted in Notes.
-- [ ] Ids are stable across re-runs (same commit → same ids).
+- [x] Extraction command exists and runs on Discourse checkout.
+- [x] Function count + 3 sample rows pasted in Notes.
+- [x] Ids are stable across re-runs (same commit → same ids).
+
+## Notes
+
+- Repo: mastodon/mastodon @ `398b542` (depth-1, 2026-09-21).
+- Scope cut: `app/` + `lib/` only (1328 files). streaming/frontend/spec excluded.
+- Result: files=1328 functions=7181 errors=0 sha=1404cd0670f3e05a.
+  Two runs byte-identical (cmp clean).
+- Samples: `IpBlockPolicy#destroy?`, `MediaAttachmentPolicy#download?`,
+  `#show_status?` (policies/ 집중 확인).
+- Env: .venv tree-sitter 0.26.0 (see requirements.txt). D6 exception:
+  parser runtime is the documented "needed" case.

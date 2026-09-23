@@ -6,10 +6,12 @@ frontier LLM deep dive, falsification. See [docs/product.md](docs/product.md).
 ## Run
 
 Commands live in the Makefile. Start with `make help`.
+Toolchain via mise: `mise install` (python + uv),
+then `make venv` (`uv sync`).
 
 ## Read before working
 
-- Product (why, roadmap): [docs/product.md](docs/product.md)
+- Product (why, direction): [docs/product.md](docs/product.md)
 - Pipeline design: [docs/architecture.md](docs/architecture.md)
 - Baselines and metrics: [docs/eval.md](docs/eval.md)
 - Past calls: [docs/decisions.md](docs/decisions.md) — log new ones here
@@ -19,6 +21,8 @@ Commands live in the Makefile. Start with `make help`.
 - Measurements: `docs/specs/<topic>.md`
 - Literature/background: `docs/research/YYYY-MM-DD-<slug>.md`
 - Work items: `tickets/` (see [tickets/README.md](tickets/README.md))
+- Eval inputs: `eval/labels/` (ground truth) + `eval/baselines/`
+  (frozen artifacts).
 
 ## Rules
 

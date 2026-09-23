@@ -49,7 +49,7 @@
 ## 설계 반영
 
 - Composer는 static 뼈대 우선 (D5).
-- Baseline 2단화 (D4). 강한 상대는 IRIS류.
+- Baseline 2단화 (D10). 강한 상대는 IRIS류.
 - Falsification에 예산 우선 배분.
 - Agentic 확장은 phase 2로 보류.
 

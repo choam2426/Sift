@@ -1,0 +1,20 @@
+[
+  {"pattern": "\\bcan\\?\\s*\\(", "weight": 3, "reason": "authorization predicate can?"},
+  {"pattern": "\\bauthorize!?", "weight": 3, "reason": "policy enforcement authorize"},
+  {"pattern": "[Pp]olicy", "weight": 3, "reason": "policy file/class signal"},
+  {"pattern": "role\\s*\\.\\s*(can\\?|overrides\\?|permissions?)", "weight": 3, "reason": "role/permission gate"},
+  {"pattern": "\\b(admin|moderator|staff)\\?|\\bmanage_\\w+", "weight": 3, "reason": "role gate admin/mod check"},
+  {"pattern": "\\b(authorized|permitted|allowed)\\?|\\bhas_permission\\?", "weight": 3, "reason": "permission predicate"},
+  {"pattern": "\\bcurrent_(account|user)\\b", "weight": 2, "reason": "actor in condition current_account/user"},
+  {"pattern": "(owner\\?|account_id\\s*==|user_id\\s*==|owned_by\\?)", "weight": 2, "reason": "ownership/tenant compare"},
+  {"pattern": "(head\\s*:forbidden|render.*forbidden|raise.*[Uu]nauthorized|return.*unless)", "weight": 2, "reason": "state guard deny branch"},
+  {"pattern": "\\b(destroy|delete)!?", "weight": 2, "reason": "sensitive write destroy/delete"},
+  {"pattern": "\\.(save|update|update_column|toggle)!?", "weight": 2, "reason": "sensitive write save/update"},
+  {"pattern": "\\b(session|password|access_token|api_key|secret|oauth)\\b", "weight": 2, "reason": "sensitive credential/token handling"},
+  {"pattern": "\\bauthenticate!?", "weight": 1, "reason": "auth-adjacent authenticate login check"},
+  {"pattern": "\\bbefore_action\\b", "weight": 1, "reason": "controller filter before_action"},
+  {"pattern": "\\b(permission|privilege|scope)\\b", "weight": 1, "reason": "auth-adjacent permission/scope keyword"},
+  {"pattern": "\\b[Cc]ontroller\\b", "weight": 1, "reason": "controller context keyword"},
+  {"pattern": "\\b(suspend|block|silence|approve|reject)!?", "weight": 1, "reason": "moderation action keyword"},
+  {"pattern": "\\b(verify!*|verified\\?|confirmed\\?|mfa|otp|2fa)", "weight": 1, "reason": "auth-adjacent verify check"}
+]

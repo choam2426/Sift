@@ -1,1 +1,5 @@
 .env
+targets/
+.venv/
+data/
+mise.local.toml
