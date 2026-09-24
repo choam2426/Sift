@@ -1,0 +1,78 @@
+[
+  {
+    "unit_id": "curl-8.3.0:lib/socks.c:548:do_SOCKS5",
+    "group": "known_bug",
+    "case_id": "CVE-2023-38545",
+    "name": "do_SOCKS5",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_3_0/lib/socks.c",
+    "start_line": 548,
+    "end_line": 1054,
+    "sha256": "4a6668a07dde1866f8219decb27a32efd3ea5c2f7782057eb906c3b3a06fa1d6"
+  },
+  {
+    "unit_id": "curl-8.4.0:lib/socks.c:548:do_SOCKS5",
+    "group": "patched_counterpart",
+    "case_id": "CVE-2023-38545",
+    "name": "do_SOCKS5",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_4_0/lib/socks.c",
+    "start_line": 548,
+    "end_line": 1054,
+    "sha256": "4163293e92167caeea69b3a8042511efc29f647bde141c72791e8959997ecba1"
+  },
+  {
+    "unit_id": "curl-8.3.0:lib/socks.c:201:socks_state_send",
+    "group": "reviewed_control",
+    "name": "socks_state_send",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_3_0/lib/socks.c",
+    "start_line": 201,
+    "end_line": 230,
+    "sha256": "ead5092a2ee4754b81a6ca9a53badbd92cd57aa31c2ee8546f5004e2bd8496b3"
+  },
+  {
+    "unit_id": "curl-8.3.0:lib/socks.c:232:socks_state_recv",
+    "group": "reviewed_control",
+    "name": "socks_state_recv",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_3_0/lib/socks.c",
+    "start_line": 232,
+    "end_line": 261,
+    "sha256": "2c57a9dc08b447b44017cfa7b9cbdea41f1cd0f54777568a90927bf1b781c03a"
+  },
+  {
+    "unit_id": "etherpad-1.6.2:src/node/hooks/express/apicalls.js:8:apiCaller",
+    "group": "known_bug",
+    "case_id": "CVE-2018-6835",
+    "name": "apiCaller",
+    "url": "https://raw.githubusercontent.com/ether/etherpad-lite/1.6.2/src/node/hooks/express/apicalls.js",
+    "start_line": 8,
+    "end_line": 29,
+    "sha256": "6ed572e746fd4c8cddb8348192f4ffe6debf98c7eb7b23077689676112142e89"
+  },
+  {
+    "unit_id": "etherpad-1.6.4:src/node/hooks/express/apicalls.js:9:apiCaller",
+    "group": "patched_counterpart",
+    "case_id": "CVE-2018-6835",
+    "name": "apiCaller",
+    "url": "https://raw.githubusercontent.com/ether/etherpad-lite/1.6.4/src/node/hooks/express/apicalls.js",
+    "start_line": 9,
+    "end_line": 30,
+    "sha256": "c87d60f7372f5ed257e26efbee694da6df7c7a64d111cff444aa39cc1f77ed12"
+  },
+  {
+    "unit_id": "etherpad-1.6.2:src/node/hooks/express/apicalls.js:68:currentVersionRoute",
+    "group": "reviewed_control",
+    "name": "currentVersionRoute",
+    "url": "https://raw.githubusercontent.com/ether/etherpad-lite/1.6.2/src/node/hooks/express/apicalls.js",
+    "start_line": 68,
+    "end_line": 70,
+    "sha256": "9e6e9ee21e9015912306b71205119c1badd35efda1cd1122a4380f50388686f0"
+  },
+  {
+    "unit_id": "etherpad-1.6.2:src/node/hooks/express/apicalls.js:55:jsErrorRoute",
+    "group": "unreviewed",
+    "name": "jsErrorRoute",
+    "url": "https://raw.githubusercontent.com/ether/etherpad-lite/1.6.2/src/node/hooks/express/apicalls.js",
+    "start_line": 55,
+    "end_line": 65,
+    "sha256": "3581dceb8bfae94748f0fd1352ba631f9ababb312c725b07e2ce0248043fac61"
+  }
+]

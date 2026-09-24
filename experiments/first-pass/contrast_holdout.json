@@ -1,0 +1,44 @@
+[
+  {
+    "id": "werkzeug-multipart-parts",
+    "source": "https://raw.githubusercontent.com/pallets/werkzeug/2.2.2/src/werkzeug/formparser.py",
+    "sha256": "acb12efd9c15a6faac85983a138422bf7e90b26ce60b2b538a305e197ddd0c69",
+    "target": "MultiPartParser.parse",
+    "advisory": "https://github.com/pallets/werkzeug/security/advisories/GHSA-xg9f-g7g7-2323"
+  },
+  {
+    "id": "werkzeug-cookie-prefix",
+    "source": "https://raw.githubusercontent.com/pallets/werkzeug/2.2.2/src/werkzeug/_internal.py",
+    "sha256": "83c3c7273db3dfd237c74bf04ef4ca6d7220d1e510a8617d52d5330cc593d10c",
+    "target": "_cookie_parse_impl",
+    "advisory": "https://github.com/pallets/werkzeug/security/advisories/GHSA-px8h-6qxv-m22q"
+  },
+  {
+    "id": "urllib3-303-body",
+    "source": "https://raw.githubusercontent.com/urllib3/urllib3/2.0.6/src/urllib3/poolmanager.py",
+    "sha256": "d12b4c9c6084fabd2fb90ca012c4e979a42311054123205beb8d2b0f5068bdfc",
+    "target": "PoolManager.urlopen",
+    "advisory": "https://github.com/urllib3/urllib3/security/advisories/GHSA-g4mx-q9vg-27p4"
+  },
+  {
+    "id": "urllib3-stream-bomb",
+    "source": "https://raw.githubusercontent.com/urllib3/urllib3/2.5.0/src/urllib3/response.py",
+    "sha256": "4d54d2bba43553453b8681d8308471c6e878ceba1e328f1be442380ce035dc4a",
+    "target": "HTTPResponse.read",
+    "advisory": "https://github.com/urllib3/urllib3/security/advisories/GHSA-2xpw-w6gg-jr37"
+  },
+  {
+    "id": "django-multi-upload",
+    "source": "https://raw.githubusercontent.com/django/django/4.2/django/forms/widgets.py",
+    "sha256": "a7064236ac2cd60d47f5097d8bf3676c079826b6d3e3bf5f3b22c59a1ddd719f",
+    "target": "FileInput.value_from_datadict",
+    "advisory": "https://docs.djangoproject.com/en/4.2/releases/4.2.1/"
+  },
+  {
+    "id": "pillow-imagemath-eval",
+    "source": "https://raw.githubusercontent.com/python-pillow/Pillow/10.1.0/src/PIL/ImageMath.py",
+    "sha256": "5b5f35aff2247a30d1c79e238010c2bbf98d2d252919014d6cf3c623317357ca",
+    "target": "eval",
+    "advisory": "https://pillow.readthedocs.io/en/stable/releasenotes/10.2.0.html"
+  }
+]

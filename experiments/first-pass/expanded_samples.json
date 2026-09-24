@@ -1,0 +1,122 @@
+[
+  {
+    "unit_id": "curl-8.3.0:lib/easy.c:896:curl_easy_duphandle",
+    "group": "known_bug",
+    "case_id": "CVE-2023-38546",
+    "name": "curl_easy_duphandle",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_3_0/lib/easy.c",
+    "start_line": 896,
+    "end_line": 1038,
+    "sha256": "5dd10bd8945936fb64fdcac0a36873e156697484bf00e345c4d77849e8a424b6"
+  },
+  {
+    "unit_id": "curl-8.4.0:lib/easy.c:893:curl_easy_duphandle",
+    "group": "patched_counterpart",
+    "case_id": "CVE-2023-38546",
+    "name": "curl_easy_duphandle",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_4_0/lib/easy.c",
+    "start_line": 893,
+    "end_line": 1033,
+    "sha256": "56fee48b94a0e419fd7cf67ddca2f66aceabaa0ed0e740aead7867eff50d5efe"
+  },
+  {
+    "unit_id": "curl-8.3.0:lib/easy.c:1044:curl_easy_reset",
+    "group": "reviewed_control",
+    "case_id": "CVE-2023-38546",
+    "name": "curl_easy_reset",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_3_0/lib/easy.c",
+    "start_line": 1044,
+    "end_line": 1070,
+    "sha256": "7a61deef30bc84ed112b506f699aba56bc4e3108e19440de576e514c4eeb676d"
+  },
+  {
+    "unit_id": "curl-8.3.0:lib/easy.c:840:dupset",
+    "group": "unreviewed",
+    "case_id": "CVE-2023-38546",
+    "name": "dupset",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_3_0/lib/easy.c",
+    "start_line": 840,
+    "end_line": 889,
+    "sha256": "4fe584993259c4f22a2eb7642bcff3c15627dc548e29ef397bc34f922e839359"
+  },
+  {
+    "unit_id": "curl-8.4.0:lib/cookie.c:483:Curl_cookie_add",
+    "group": "known_bug",
+    "case_id": "CVE-2023-46218",
+    "name": "Curl_cookie_add",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_4_0/lib/cookie.c",
+    "start_line": 483,
+    "end_line": 1181,
+    "sha256": "2677eaff9090a1676f9a393fe2f024c009b143db51d45d3dd232b62a376c7455"
+  },
+  {
+    "unit_id": "curl-8.5.0:lib/cookie.c:481:Curl_cookie_add",
+    "group": "patched_counterpart",
+    "case_id": "CVE-2023-46218",
+    "name": "Curl_cookie_add",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_5_0/lib/cookie.c",
+    "start_line": 481,
+    "end_line": 1187,
+    "sha256": "b5df86750c8d25479e26b16b106a71ad3013671a0eafa843aff453307635fc95"
+  },
+  {
+    "unit_id": "curl-8.4.0:lib/cookie.c:1569:Curl_cookie_cleanup",
+    "group": "reviewed_control",
+    "case_id": "CVE-2023-46218",
+    "name": "Curl_cookie_cleanup",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_4_0/lib/cookie.c",
+    "start_line": 1569,
+    "end_line": 1577,
+    "sha256": "3de34a6ccfa0c100b7b8ccad37cad928f5d8768cc50c17f897bca8c952fe090b"
+  },
+  {
+    "unit_id": "curl-8.4.0:lib/cookie.c:1380:Curl_cookie_getlist",
+    "group": "unreviewed",
+    "case_id": "CVE-2023-46218",
+    "name": "Curl_cookie_getlist",
+    "url": "https://raw.githubusercontent.com/curl/curl/curl-8_4_0/lib/cookie.c",
+    "start_line": 1380,
+    "end_line": 1489,
+    "sha256": "1c2245d268445d68215cee4d29c6d0c4d948603c191512b3f38cdd417eb93492"
+  },
+  {
+    "unit_id": "node-tmp-0.2.6:lib/tmp.js:533:_assertPath",
+    "group": "known_bug",
+    "case_id": "CVE-2026-49982",
+    "name": "_assertPath",
+    "url": "https://raw.githubusercontent.com/raszi/node-tmp/v0.2.6/lib/tmp.js",
+    "start_line": 533,
+    "end_line": 539,
+    "sha256": "1f1b42ec32e051ccf9754591ffbdddc540e3778fa206734e42e5993550f2a01b"
+  },
+  {
+    "unit_id": "node-tmp-0.2.7:lib/tmp.js:539:_assertPath",
+    "group": "patched_counterpart",
+    "case_id": "CVE-2026-49982",
+    "name": "_assertPath",
+    "url": "https://raw.githubusercontent.com/raszi/node-tmp/v0.2.7/lib/tmp.js",
+    "start_line": 539,
+    "end_line": 549,
+    "sha256": "106817ed789b5f3e47493fb572926a4a14e71d9dc254f8b96c018d0cc9dc6f61"
+  },
+  {
+    "unit_id": "node-tmp-0.2.6:lib/tmp.js:609:_getRelativePathSync",
+    "group": "reviewed_control",
+    "case_id": "CVE-2026-49982",
+    "name": "_getRelativePathSync",
+    "url": "https://raw.githubusercontent.com/raszi/node-tmp/v0.2.6/lib/tmp.js",
+    "start_line": 609,
+    "end_line": 620,
+    "sha256": "8477e80addc69be41ce84ca4cabb07b7a5f12300b6099d604d146261431b3a45"
+  },
+  {
+    "unit_id": "node-tmp-0.2.6:lib/tmp.js:391:_randomChars",
+    "group": "unreviewed",
+    "case_id": "CVE-2026-49982",
+    "name": "_randomChars",
+    "url": "https://raw.githubusercontent.com/raszi/node-tmp/v0.2.6/lib/tmp.js",
+    "start_line": 391,
+    "end_line": 407,
+    "sha256": "1888fa8273a9cc1586d8c484748035a0f5be1c7d30e6596271b6f21615c1b4b1"
+  }
+]
