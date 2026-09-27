@@ -18,7 +18,7 @@
 
 ## 사례 구성 — 제안
 
-설계용: 7-Zip 26.01(기존 라벨), zlib, libexpat, libtiff, stb_image 또는 cJSON. 봉인용: libarchive, lwIP 또는 FreeRDP, curl. 각 사례의 리비전·수정 커밋·필수 줄·기전은 확인 후 `experiments/second-pass/labels/`에 고정하며, 확인 전까지 이 목록은 제안이다.
+설계용: 7-Zip 26.01(기존 라벨), zlib, libexpat, libtiff, stb_image 또는 cJSON. 봉인용: libarchive, lwIP 또는 FreeRDP, curl. 각 사례의 리비전·수정 커밋·필수 줄·기전은 확인 후 `experiments/labels/`에 고정하며, 확인 전까지 이 목록은 제안이다.
 
 ## 규칙
 

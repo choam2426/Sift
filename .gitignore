@@ -3,5 +3,6 @@ targets/
 .venv/
 data/
 mise.local.toml
-experiments/*/runs/
+experiments/archive/*/runs/
+experiments/runs/
 __pycache__/

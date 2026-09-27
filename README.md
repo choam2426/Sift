@@ -5,6 +5,5 @@ Sift는 취약점 연구원이 소스 코드베이스, 바이너리, 디컴파�
 ## 문서
 
 - [제품 명세](docs/product.md): 목적, 분석 대상, 사용 경험, 결과
-- [1차 Jev 입력 범위 실험](experiments/first-pass/README.md): 함수 본문과 직접 맥락의 범위
-- [2차 분석 실험](experiments/second-pass/README.md): 후보 구조, 비교 환경, 기록, 판정 방법
+- [실험 결과 요약](experiments/README.md): 1차 확정 결과와 2차 실험 기록
 - [결정 기록](docs/adr/): 합의한 선택과 이유
