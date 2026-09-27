@@ -6,3 +6,4 @@ mise.local.toml
 experiments/archive/*/runs/
 experiments/runs/
 __pycache__/
+runs/

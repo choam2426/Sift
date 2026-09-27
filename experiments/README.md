@@ -38,6 +38,22 @@
 
 이 결과와 ADR 0010·0011에 따라 2차는 **출발 함수당 하나의 묶음으로 재선별**하는 방향으로 바뀌었고, 채택 여부는 1차 순위 기준선과의 3차 비교로 정한다. 세부 기록: [second-pass](archive/second-pass/README.md), [부분 평가](archive/second-pass/partial-results-7zip-2026-09-27.md).
 
+## 코드 조회: tree-sitter 함수 추출 정확도 — 2026-09-27
+
+`sift.code`(tree-sitter)로 추출한 함수를 1차 실험의 Clang 추출과 같은 파일 범위에서 대조했다. 시작 줄 ±2와 끝 줄이 일치하면 정확으로 센다.
+
+| 대상 | Clang 함수 | 정확 | 범위 틀림 | 누락 | 추출 시간 |
+|---|---:|---:|---:|---:|---:|
+| Expat R_2_5_0 `expat/lib` | 283 | 280 (98.9%) | 0 | 3 | 0.1초 |
+| 7-Zip 26.01 `C/` (55개 파일) | 643 | 626 (97.4%) | 10 | 7 | 0.3초 |
+
+- 매크로로 만든 이름(`PREFIX(scanComment)`, `NS(...)`)은 매크로 호출 그대로 이름으로 쓴다. 범위는 정확하다.
+- 세미콜론 없는 문장 매크로(`PRF_STR(...)`) 때문에 tree-sitter가 함수 끝을 수천 줄 뒤로 잡는 문제가 있었다. 7-Zip 라벨 함수 `MixCoder_Code`가 580~2877줄로 잡혔다(실제 580~785). 끝을 원문의 중괄호 짝으로 정하도록 고쳐 해결했다.
+- 남은 실패는 중괄호를 여닫는 매크로 쌍(`SKIP_HEADER2_MT`/`SKIP_FOOTER_MT`), 호출 규약 매크로가 이름 자리에 오는 경우(`Z7_FASTCALL`), 매크로 생성 코드 영역이다.
+- Clang에 없고 tree-sitter에만 있는 함수(Expat 19개, 7-Zip 122개)는 대부분 Clang 빌드 구성에서 빠진 조건부 컴파일 분기다.
+
+ADR 0014의 전환 조건(필수 맥락을 눈에 띄게 더 놓침)에는 해당하지 않아 tree-sitter를 유지한다. 2차 묶음의 필수 줄 포함률은 2차 구현 때 다시 잰다.
+
 ## 관계 추출 도구 — 기록
 
 CodeQL CLI 2.27.1로 C/C++·Rust·Go·Python 스냅샷의 데이터베이스와 직접 호출 관계를 얻었다. 7-Zip 함수 포인터와 urllib3 동적 메서드 호출은 미해결. C 파일 하나를 Clang AST로 확인한 결과 직접 호출·필드 접근 근거는 CodeQL 없이도 얻을 수 있었다. 기록: [codeql-pilot](archive/second-pass/codeql-pilot/README.md).
