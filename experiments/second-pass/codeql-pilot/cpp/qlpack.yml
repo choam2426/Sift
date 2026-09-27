@@ -1,0 +1,4 @@
+name: sift/codeql-pilot-cpp
+version: 0.0.0
+dependencies:
+  codeql/cpp-all: 12.1.1

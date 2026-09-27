@@ -1,0 +1,12 @@
+{
+  "status": "frozen_for_experiment",
+  "model": "jev-1.13.0",
+  "common_instruction": "Base your judgment on the supplied function bodies, declarations, and relations, including relevant checks and error paths. Do not assume an unshown contract, call order, or object identity. Treat missing context as uncertainty, not as evidence of failure or safety. Complexity and risky API use alone do not establish a security-relevant failure.",
+  "questions": {
+    "p1": "Does the code support a violation of a security-relevant safety condition, such as a bound, lifetime, or consistency requirement? The condition and how an operation can violate it should be grounded in the supplied code.",
+    "p2": "Does a caller supply arguments or use a callee's result or side effects in a way that conflicts with the callee's behavior or requirements, with a security-relevant consequence? Ground the mismatch in the code on both sides of the call.",
+    "p3": "Can an operation cause a security-relevant failure despite a preceding check intended to constrain it? Consider whether the check covers the value, object, and action actually used, including changes between the check and use.",
+    "p4": "Can initialization, updates, use, or cleanup put an object in a state that a subsequent operation uses incorrectly, with a security-relevant consequence? Ground the sequence and the connection between accesses to that object in the supplied code and relations.",
+    "p5": "Does the code support a concrete security-relevant failure in which a triggering input or state leads through an incorrect operation to a harmful consequence? Consider the connection from trigger to consequence, including checks and error handling that may prevent the failure."
+  }
+}
