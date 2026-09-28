@@ -41,6 +41,16 @@ class Unanalyzed:
     reason: str
 
 
+@dataclass(frozen=True)
+class Call:
+    caller: str         # Function.id
+    line: int
+    kind: str           # direct (a function in the target) | external | indirect (no static target)
+    callee: str | None  # Function.id for direct calls
+    callee_name: str    # spelling; for indirect calls the pointer's field or variable, if any
+    passes_values: bool  # an argument uses one of the caller's parameters
+
+
 @dataclass
 class Scan:
     functions: list[Function]
@@ -49,6 +59,7 @@ class Scan:
     parses: int
     error_diagnostics: int
     failed_parses: int  # configurations libclang refused; the files may still parse in others
+    calls: list[Call]
 
 
 @dataclass(frozen=True)

@@ -11,6 +11,7 @@ def test_finds_definitions_in_every_reachable_configuration(compile_db):
     functions = {f.id: f for f in scan(compile_db).functions}
     assert set(functions) == {
         "decode.c:5:read_length", "decode.c:10:decode_block", "decode.c:20:find_marker",
+        "decode.c:28:dispatch",
         "platform.c:5:read_random",    # only under _WIN32
         "platform.c:10:read_random",
         "platform.c:18:feature",       # only with SIFT_FEATURE defined
@@ -54,3 +55,14 @@ def test_reports_only_code_that_no_evaluated_function_contains(compile_db):
         lines = (TARGET / u.path).read_text().splitlines()[u.start_line - 1:u.end_line]
         assert not {(u.path, n) for n in range(u.start_line, u.end_line + 1)} & spans, u
         assert any(line.strip() and not line.strip().startswith("#") for line in lines), u
+
+
+def test_records_calls_with_their_targets(compile_db):
+    calls = {(c.caller, c.callee_name, c.kind, c.callee, c.passes_values) for c in scan(compile_db).calls}
+    assert ("decode.c:10:decode_block", "read_length", "direct", "decode.c:5:read_length", True) in calls
+    assert ("decode.c:10:decode_block", "memcpy", "external", None, True) in calls
+    # a callee defined differently per configuration links to every definition
+    assert {c[3] for c in calls if c[0] == "platform.c:32:after_macros" and c[1] == "read_random"} == {
+        "platform.c:5:read_random", "platform.c:10:read_random"}
+    assert ("platform.c:32:after_macros", "read_random", "direct", "platform.c:10:read_random", False) in calls
+    assert ("decode.c:28:dispatch", "h", "indirect", None, True) in calls  # through a function pointer

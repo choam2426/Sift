@@ -33,6 +33,7 @@ def write(directory: Path, manifest: dict, scan: Scan,
     _jsonl(directory / "functions.jsonl",
            [{k: v for k, v in asdict(f).items() if k != "code"} for f in scan.functions])
     _jsonl(directory / "unanalyzed.jsonl", [asdict(u) for u in scan.unanalyzed])
+    _jsonl(directory / "calls.jsonl", [asdict(c) for c in scan.calls])
     _jsonl(directory / "triage.jsonl", [asdict(t) for t in triaged])
     _jsonl(directory / "selected.jsonl", [asdict(t) for t in ranked(triaged)])
     return summary

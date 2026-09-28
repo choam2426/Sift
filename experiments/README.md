@@ -88,6 +88,25 @@ Expat R_2_5_0 `lib/`를 `sift triage`로 실제 Jev(`jev-1.13.0`)에 보냈다. 
 - 새로 평가된 함수: `siphash.h`의 7개(1차는 헤더 제외), Windows 구성에서만 있는 `writeRandomBytes_rand_s`(0.71).
 - C 코드는 약 1.84글자당 입력 1토큰이었다. `--estimate`가 4글자당 1토큰으로 계산해 2배 넘게 과소 추정했으므로 1.8로 고쳤다.
 
+## 2차 묶음 규칙의 도달률 — 2026-09-28
+
+[ADR 0016](../docs/adr/0016-second-pass-bundle-principles.md)의 1단계. 설계용 라벨 5개에서 1차 선별 함수만 출발점으로 삼아, 묶음(크기 한도 55,000자)이 필수 줄을 모두 담는지 Jev 없이 쟀다. 7-Zip은 새 추출로 1차를 다시 돌리지 않아 1차 실험의 상위 출발점 두 개만 썼다. 규칙: A 출발 함수 + 대상 안의 피호출자, B A + 호출자, D B + 호출자의 피호출자(형제), E A + 피호출자의 피호출자(2홉).
+
+| 사례 | A | B | D | E | 모두 담는 출발점 (1차 순위) |
+|---|---|---|---|---|---|
+| 7-Zip 26.01 | 6/6 | 6/6 | 6/6 | 6/6 | `XzUnpacker_Code` (3위) |
+| zlib 1.2.12 | 4/4 | 4/4 | 4/4 | 4/4 | `inflate` (1위) |
+| libexpat 2.4.4 | 4/4 | 4/4 | 4/4 | 4/4 | `externalEntityContentProcessor` (87위), `contentProcessor` (131위) |
+| libtiff 4.7.0 | 1/3 | 2/3 | **3/3** | **3/3** | D `TIFFRGBAImageBegin` (132위), E `tools/tiff2rgba.c` `cvt_whole_image` (92위) |
+| stb `8b5f1f37` | 4/6 | 4/6 | 5/6 | 4/6 | 없음 |
+
+- B는 A보다 커지기만 하고 새로 해결한 사례가 없다. 값을 넘기는 함수를 먼저 넣는 C는 B와 결과가 같았다.
+- D와 E는 모두 4/5 사례를 해결하고, 묶음 크기 중앙값은 E가 A의 약 1.5~2배, D는 약 3배다. 차이는 사례 하나에서만 나와 둘 중 하나를 고를 근거가 없다.
+- 결함 지점보다 호출자가 더 좋은 출발점인 경우가 많았다(7-Zip, libexpat, libtiff).
+- stb는 결함이 호출자 쪽 2홉과 피호출자에 흩어져 어떤 규칙으로도 전부 담지 못했다.
+
+같은 날 새 사례 4개의 1차 선별(4,731개 함수 전부 채점, 입력 3,120,275토큰)에서 결함 지점은 zlib 1위, libexpat 12.7%, stb 11.1%로 상위 15%에 들었고 **libtiff는 24.5%(0.78)로 빠졌다.** libtiff도 값의 출처 `TIFFRGBAImageBegin`(8.0%)과 쓰기 지점 `gtStripContig`(7.8%)는 선별됐다. 이 네 대상은 15%를 정할 때 쓰지 않았다. 도달률 스크립트는 벤치로 옮길 때 정리한다.
+
 ## 관계 추출 도구 — 기록
 
 CodeQL CLI 2.27.1로 C/C++·Rust·Go·Python 스냅샷의 데이터베이스와 직접 호출 관계를 얻었다. 7-Zip 함수 포인터와 urllib3 동적 메서드 호출은 미해결. C 파일 하나를 Clang AST로 확인한 결과 직접 호출·필드 접근 근거는 CodeQL 없이도 얻을 수 있었다. 기록: [codeql-pilot](archive/second-pass/codeql-pilot/README.md).

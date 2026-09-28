@@ -39,8 +39,8 @@ def test_selects_and_ranks_functions_at_or_above_the_threshold(tmp_path, compile
     selected = [row["function_id"] for row in read(run / "selected.jsonl")]
     assert selected == ["decode.c:10:decode_block", "table.cpp:14:store::Table::row", "decode.c:20:find_marker"]
     summary = json.loads((run / "manifest.json").read_text())["summary"]
-    assert (summary["functions"], summary["scored"], summary["unscored"], summary["selected"]) == (15, 14, 1, 3)
-    assert summary["input_tokens"] == 140 and summary["stopped"] is None
+    assert (summary["functions"], summary["scored"], summary["unscored"], summary["selected"]) == (16, 15, 1, 3)
+    assert summary["input_tokens"] == 150 and summary["stopped"] is None
     assert any(row["reason"] == "no configuration parsed this file" for row in read(run / "unanalyzed.jsonl"))
 
 
@@ -48,16 +48,16 @@ def test_rerun_resumes_from_the_cache(tmp_path, compile_db, monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "key")
     run, calls = tmp_path / "run", []
     main(triage(run, compile_db, "--max-requests", "2"), transport=fake_jev(calls))
-    assert json.loads((run / "manifest.json").read_text())["summary"]["unsent"] == 13
+    assert json.loads((run / "manifest.json").read_text())["summary"]["unsent"] == 14
 
     assert main(triage(run, compile_db), transport=fake_jev(calls)) == 0
-    assert len(calls) == 15  # 2 first, then only the 13 that were not sent
+    assert len(calls) == 16  # 2 first, then only the 14 that were not sent
 
 
 def test_estimate_needs_no_key_and_sends_nothing(tmp_path, compile_db, capsys, monkeypatch):
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     assert main(triage(tmp_path / "run", compile_db, "--estimate")) == 0
-    assert json.loads(capsys.readouterr().out)["functions"] == 15
+    assert json.loads(capsys.readouterr().out)["functions"] == 16
 
 
 def test_selection_is_the_top_share_above_the_floor():

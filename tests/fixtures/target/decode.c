@@ -22,3 +22,10 @@ find_marker(char *buffer, size_t size)
 {
     return memchr(buffer, 0xff, size);
 }
+
+typedef int (*handler)(const unsigned char *, size_t);
+
+int dispatch(handler h, const unsigned char *in, size_t size)
+{
+  return h(in, size);
+}

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import clang.cindex as ci
 
-from sift.code import Function, Scan, Unanalyzed, definitions
+from sift.code import Call, Function, Scan, Unanalyzed, definitions
 
 SOURCES = {".c", ".cc", ".cpp", ".cxx"}
 TARGETS = ("x86_64-linux-gnu", "aarch64-linux-gnu", "i686-linux-gnu", "x86_64-pc-windows-msvc")
@@ -67,6 +67,8 @@ class _State:
         self.active = defaultdict(set)    # path -> lines some configuration compiled
         self.seen = set()                 # paths some translation unit entered
         self.tried = set()                # (source, label) macro flips already parsed
+        self.usr = defaultdict(set)       # clang USR -> (path, end) of its definitions, one per configuration
+        self.calls = {}                   # (path, end, call offset) -> (line, callee USR, name, passes)
         self.configs, self.parses, self.errors, self.failed = [], 0, 0, 0
 
     def merge(self, results):
@@ -79,19 +81,23 @@ class _State:
             for path, skipped in result["files"].items():
                 self.seen.add(path)
                 self.active[path] |= set(range(1, _line_count(self.root / path) + 1)) - set(skipped)
-            for path, start, end, (first, last), name in result["functions"]:
+            for path, start, end, (first, last), name, usr in result["functions"]:
                 # attribute macros can move the start between configurations; the closing brace stays
+                self.usr[usr].add((path, end))
                 entry = self.functions.setdefault((path, end), [set(), set(), start, first, last])
                 entry[0].add(name)
                 entry[1].add(result["label"])
                 if start < entry[2]:
                     entry[2:4] = [start, first]
+            for path, end, offset, line, usr, name, passes in result["calls"]:
+                self.calls.setdefault((path, end, offset), (line, usr, name, passes))
 
     def flips(self, estimates, base):
         """Configurations that define or undefine the macros guarding still-skipped definitions."""
         args_of = {}
         for path, args, _ in base:
-            args_of.setdefault(path.relative_to(self.root).as_posix(), (path, args))
+            if path.is_relative_to(self.root):
+                args_of.setdefault(path.relative_to(self.root).as_posix(), (path, args))
         tasks = {}
         for d in estimates:
             if d.path in args_of and d.start_line not in self.active[d.path]:
@@ -108,7 +114,7 @@ class _State:
         return sorted(tasks.values())
 
     def result(self, estimates) -> Scan:
-        functions, unanalyzed = [], []
+        functions, unanalyzed, ids = [], [], {}
         evaluated = defaultdict(set)  # lines inside a function's text, which Jev sees whole
         for (path, end), (names, configs, start, first, last) in sorted(self.functions.items()):
             code = (self.root / path).read_bytes()[start:end].decode(errors="replace")
@@ -116,7 +122,8 @@ class _State:
             if "{" not in code:  # the body comes from a macro; its text is not in this file
                 unanalyzed.append(Unanalyzed(path, first, last, name, "body produced by a macro"))
                 continue
-            functions.append(Function(f"{path}:{first}:{name}", name, path, first, last, code,
+            ids[(path, end)] = f"{path}:{first}:{name}"
+            functions.append(Function(ids[(path, end)], name, path, first, last, code,
                                       tuple(sorted(configs))))
             evaluated[path] |= set(range(first, last + 1))
         reported = defaultdict(set)
@@ -140,19 +147,31 @@ class _State:
             for first, last in _blocks(inactive):
                 if any(line.strip() and not line.lstrip().startswith("#") for line in text[first - 1:last]):
                     unanalyzed.append(Unanalyzed(path, first, last, None, "inactive in every configuration"))
-        return Scan(functions, unanalyzed, self.configs, self.parses, self.errors, self.failed)
+        calls = []
+        for (path, end, _), (line, usr, name, passes) in sorted(self.calls.items()):
+            if (path, end) not in ids:
+                continue  # the caller's body comes from a macro
+            targets = sorted(ids[k] for k in self.usr.get(usr, ()) if k in ids)
+            kind = "indirect" if usr is None else "direct" if targets else "external"
+            for callee in targets or [None]:
+                calls.append(Call(ids[(path, end)], line, kind, callee, name, passes))
+        return Scan(functions, unanalyzed, self.configs, self.parses, self.errors, self.failed, calls)
 
 
 def _commands(root: Path, compile_dbs: list[Path]) -> list[tuple[Path, tuple[str, ...]]]:
+    """Compile commands for sources under the root. When there are none, as for a header-only
+    library built through a harness file elsewhere, every command is used; only definitions
+    under the root are recorded either way."""
     commands = []
     for db in compile_dbs:
         for entry in json.loads(db.read_text()):
             directory = Path(entry["directory"])
             path = (directory / entry["file"]).resolve()
-            if path.is_relative_to(root) and path.suffix in SOURCES:
+            if path.suffix in SOURCES:
                 args = entry.get("arguments") or shlex.split(entry["command"])
                 commands.append((path, _clean(args, directory)))
-    return list(dict.fromkeys(commands))
+    inside = [c for c in commands if c[0].is_relative_to(root)]
+    return list(dict.fromkeys(inside or commands))
 
 
 def _clean(args, directory: Path) -> tuple[str, ...]:
@@ -289,13 +308,13 @@ def _parse(task):
     try:
         tu = ci.Index.create().parse(source, args=list(args), options=PARSE_OPTIONS)
     except ci.TranslationUnitLoadError:  # e.g. flags this language rejects; other configs may parse
-        return {"label": label, "functions": [], "files": {}, "errors": 0, "failed": 1}
+        return {"label": label, "functions": [], "calls": [], "files": {}, "errors": 0, "failed": 1}
 
     def relative(file) -> str | None:
         path = Path(file.name).resolve() if file is not None else None
         return path.relative_to(root).as_posix() if path and path.is_relative_to(root) else None
 
-    functions = []
+    functions, calls = [], []
     stack = list(tu.cursor.get_children())
     while stack:
         cursor = stack.pop()
@@ -304,7 +323,8 @@ def _parse(task):
         if cursor.kind in KINDS and cursor.is_definition():
             extent = cursor.extent
             functions.append((path, extent.start.offset, extent.end.offset,
-                              (extent.start.line, extent.end.line), _qualified(cursor)))
+                              (extent.start.line, extent.end.line), _qualified(cursor), cursor.get_usr()))
+            calls += [(path, extent.end.offset, *call) for call in _calls(cursor)]
         elif cursor.kind.is_declaration():  # classes, templates, namespaces, friends, extern "C"
             stack.extend(cursor.get_children())
 
@@ -318,7 +338,40 @@ def _parse(task):
     ci.conf.lib.clang_disposeSourceRangeList(ranges)
     files.pop(None, None)
     errors = sum(d.severity >= ci.Diagnostic.Error for d in tu.diagnostics)
-    return {"label": label, "functions": functions, "files": files, "errors": errors, "failed": 0}
+    return {"label": label, "functions": functions, "calls": calls, "files": files, "errors": errors, "failed": 0}
+
+
+def _calls(function):
+    """(offset, line, callee USR or None, callee name, passes_values) for each call in a body."""
+    usr = function.get_usr()
+    found = []
+    for node in function.walk_preorder():
+        if node.kind != ci.CursorKind.CALL_EXPR:
+            continue
+        target = node.referenced
+        direct = target is not None and target.kind in KINDS
+        passes = any(ref.kind == ci.CursorKind.DECL_REF_EXPR and ref.referenced is not None
+                     and ref.referenced.kind == ci.CursorKind.PARM_DECL
+                     and ref.referenced.semantic_parent is not None
+                     and ref.referenced.semantic_parent.get_usr() == usr
+                     for arg in node.get_arguments() for ref in arg.walk_preorder())
+        found.append((node.extent.start.offset, node.location.line, target.get_usr() if direct else None,
+                      _written(node.location) or (target.spelling if target is not None else ""), passes))
+    return found
+
+
+def _written(location) -> str:
+    """The identifier at a location as the source spells it; headers may turn memcpy into
+    __builtin___memcpy_chk, and the agent reads the source."""
+    if location.file is None:
+        return ""
+    match = IDENT.match(_source(location.file.name), location.offset)
+    return match.group() if match else ""
+
+
+@cache
+def _source(path: str) -> str:
+    return Path(path).read_bytes().decode("latin-1")  # one character per byte keeps offsets
 
 
 def _qualified(cursor) -> str:
