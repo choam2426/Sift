@@ -9,19 +9,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sift.code import Scan
-from sift.triage import QUESTIONS, THRESHOLD, TOP_SHARE, Triaged, ranked
+from sift.triage import QUESTIONS, Triaged, ranked
 from sift.jev import MODEL
 
 
-def manifest(target: Path) -> dict:
+def manifest(target: Path, floor: float, share: float) -> dict:
     return {
         "target": str(target.resolve()),
         "revision": _revision(target),
         "started": datetime.now(UTC).isoformat(timespec="seconds"),
         "model": MODEL,
         "questions_sha256": hashlib.sha256(json.dumps(QUESTIONS, sort_keys=True).encode()).hexdigest(),
-        "threshold": THRESHOLD,
-        "top_share": TOP_SHARE,
+        "selection": {"rule": "floor and top share", "floor": floor, "share": share},
     }
 
 
@@ -29,7 +28,9 @@ def write(directory: Path, manifest: dict, scan: Scan,
           triaged: list[Triaged], stopped: str | None) -> dict:
     directory.mkdir(parents=True, exist_ok=True)
     summary = _summary(scan, triaged, stopped)
-    _json(directory / "manifest.json", manifest | {"configs": scan.configs, "summary": summary})
+    # the reference implementation accounts for every line, so nothing unseen goes unreported
+    _json(directory / "manifest.json", manifest | {"configs": scan.configs, "coverage_limits": [],
+                                                   "summary": summary})
     _jsonl(directory / "functions.jsonl",
            [{k: v for k, v in asdict(f).items() if k != "code"} for f in scan.functions])
     _jsonl(directory / "unanalyzed.jsonl", [asdict(u) for u in scan.unanalyzed])

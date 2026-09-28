@@ -2,6 +2,8 @@
 
 > 2026-09-28 변경: 선별 기준은 아래 마지막 절의 "`Noul ≥ 0.60`이면서 프로젝트별 상위 15%"다. 그 앞의 `0.60` 단독 기준은 당시 결정의 기록이다.
 
+> 재검토 상태: 2026-09-29 [ADR 0017](0017-provide-spec-and-materials.md)에 따라 질문, 하한, 상위 비율은 에이전트와 사용자가 대상에 맞게 고르는 파라미터다([스펙](../../spec/README.md) P-TRIAGE-QUESTION, P-SELECT). 아래 값은 Sift의 실험에서 쓴 값과 그 근거다.
+
 Sift의 1차 기본안은 모든 함수의 전체 본문을 Jev에 각각 제공하고 `Is this function worth a security researcher's time to inspect further for bugs?`라는 단일 `Noul` 질문으로 조사 가치 순위를 얻는 것이다. 다른 함수 본문과 관계를 따라가는 일은 2차에 맡긴다. 1차에서 모든 버그 관련 함수를 직접 선발하려는 목표 대신, 빠르게 유망한 출발점을 남기는 목표를 택했다.
 
 [파일 전체 표본 실험](../../experiments/archive/first-pass/contrastive/README.md)의 공개 취약점 6개에서 이 질문은 각 파일 상위 10% 선발 시 세 반복 모두 5개 기전에 도달했다. 더 복잡한 대조 판단 질문은 3개, 함수 길이 기준은 4개였다. [선언 추가 실험](../../experiments/archive/first-pass/declarations/README.md)에서 클래스·모듈 선언을 모든 함수에 붙여도 5개로 같았고 입력 토큰이 약 33% 늘었다. 두 실험은 `jev-1.13.0`에서 실행했다. 따라서 더 복잡한 질문이나 선언 추가를 기본안으로 채택할 근거가 없었다.

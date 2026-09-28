@@ -28,7 +28,8 @@ def read(path):
 
 
 def triage(run, compile_db, *extra):
-    return ["triage", str(TARGET), "--compile-db", str(compile_db), "--run", str(run), *extra]
+    return ["triage", str(TARGET), "--compile-db", str(compile_db), "--run", str(run),
+            "--floor", "0.6", "--share", "0.15", *extra]
 
 
 def test_selects_and_ranks_functions_at_or_above_the_threshold(tmp_path, compile_db, monkeypatch):
@@ -62,8 +63,8 @@ def test_estimate_needs_no_key_and_sends_nothing(tmp_path, compile_db, capsys, m
 
 def test_selection_is_the_top_share_above_the_floor():
     scores = [0.95, 0.9, 0.9, 0.85, 0.7, 0.65, 0.61, 0.5, 0.4, None] + [0.1] * 10  # 20 functions
-    chosen = select([Triaged(f"f{i:02}", "scored", s, "") for i, s in enumerate(scores)])
+    chosen = select([Triaged(f"f{i:02}", "scored", s, "") for i, s in enumerate(scores)], 0.6, 0.15)
     assert [t.function_id for t in chosen if t.selected] == ["f00", "f01", "f02"]  # ceil(15% of 20)
 
-    low = select([Triaged(f"g{i:02}", "scored", s, "") for i, s in enumerate([0.62] + [0.55] * 19)])
+    low = select([Triaged(f"g{i:02}", "scored", s, "") for i, s in enumerate([0.62] + [0.55] * 19)], 0.6, 0.15)
     assert [t.function_id for t in low if t.selected] == ["g00"]  # the share allows 3; the floor keeps 1

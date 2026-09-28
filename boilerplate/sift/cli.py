@@ -17,6 +17,8 @@ def main(argv=None, transport=None) -> int:
     stage1.add_argument("--compile-db", type=Path, action="append", required=True,
                         help="compile_commands.json; repeat to add configurations")
     stage1.add_argument("--run", type=Path, required=True, help="run directory; rerun to resume")
+    stage1.add_argument("--floor", type=float, required=True, help="lowest score a selected function may have")
+    stage1.add_argument("--share", type=float, required=True, help="largest fraction of the target's functions to select")
     stage1.add_argument("--concurrency", type=int, default=16)
     stage1.add_argument("--max-requests", type=int, help="stop after sending this many requests")
     stage1.add_argument("--estimate", action="store_true", help="count functions and tokens only")
@@ -31,13 +33,13 @@ def main(argv=None, transport=None) -> int:
         return 0
 
     args.run.mkdir(parents=True, exist_ok=True)
-    manifest = run.manifest(args.target)
+    manifest = run.manifest(args.target, args.floor, args.share)
     jev = Jev(api_key(), args.run / "jev-cache.jsonl", concurrency=args.concurrency,
               max_requests=args.max_requests, transport=transport)
 
     async def score():
         try:
-            return await triage(scan.functions, jev)
+            return await triage(scan.functions, jev, args.floor, args.share)
         finally:
             await jev.close()
 
