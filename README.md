@@ -1,9 +1,18 @@
 # Sift
 
-Sift는 취약점 연구원이 소스 코드베이스, 바이너리, 디컴파일된 코드에서 근거 있는 보안 문제를 찾도록 돕는 도구다. 주어진 대상 전체를 분석하고, 확인된 버그와 추가 검증이 필요한 후보를 구분해 제시하는 것을 목표로 한다.
+Sift는 취약점 연구원의 에이전트가 큰 코드베이스에서 Jev로 효율적으로 우선순위를 정하게 하는 분석기의 **설계, 스펙, 재료**다. 완성된 도구가 아니다. 연구원이 에이전트에게 "Sift를 분석 대상 X에 맞게 구축해줘"라고 요청하면, 에이전트가 이 저장소를 따라 대상에 맞게 구축하고 검증한 뒤 스캔한다.
 
-## 문서
+**[설계](DESIGN.md)부터 읽는다.** 구축 절차는 [설치 가이드](INSTALL.md)에 있다.
 
-- [제품 명세](docs/product.md): 목적, 분석 대상, 사용 경험, 결과
-- [실험 결과 요약](experiments/README.md): 1차 확정 결과와 2차 실험 기록
-- [결정 기록](docs/adr/): 합의한 선택과 이유
+| 제공물 | 위치 |
+|---|---|
+| 설계 | [`DESIGN.md`](DESIGN.md) |
+| 스펙과 적합성 시험 | [`spec/`](spec/) |
+| 보일러플레이트 (참조 구현) | [`boilerplate/`](boilerplate/) |
+| 벤치 | [`bench/`](bench/) |
+| 질문 라이브러리 | [`questions/`](questions/) |
+| 운영 스킬 | [`skill/`](skill/) |
+| 설치 가이드 | [`INSTALL.md`](INSTALL.md) |
+| 결과 환류 | [`reports/`](reports/) |
+| 실험 | [`experiments/`](experiments/README.md) |
+| 결정 기록 | [`docs/adr/`](docs/adr/) |
