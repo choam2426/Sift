@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sift.code import Scan
-from sift.triage import QUESTIONS, THRESHOLD, Triaged, ranked
+from sift.triage import QUESTIONS, THRESHOLD, TOP_SHARE, Triaged, ranked
 from sift.jev import MODEL
 
 
@@ -21,6 +21,7 @@ def manifest(target: Path) -> dict:
         "model": MODEL,
         "questions_sha256": hashlib.sha256(json.dumps(QUESTIONS, sort_keys=True).encode()).hexdigest(),
         "threshold": THRESHOLD,
+        "top_share": TOP_SHARE,
     }
 
 
@@ -32,7 +33,7 @@ def write(directory: Path, manifest: dict, scan: Scan,
     _jsonl(directory / "functions.jsonl",
            [{k: v for k, v in asdict(f).items() if k != "code"} for f in scan.functions])
     _jsonl(directory / "unanalyzed.jsonl", [asdict(u) for u in scan.unanalyzed])
-    _jsonl(directory / "triage.jsonl", [asdict(t) | {"selected": t.selected} for t in triaged])
+    _jsonl(directory / "triage.jsonl", [asdict(t) for t in triaged])
     _jsonl(directory / "selected.jsonl", [asdict(t) for t in ranked(triaged)])
     return summary
 

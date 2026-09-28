@@ -6,6 +6,7 @@ import httpx
 from conftest import TARGET
 
 from sift.cli import main
+from sift.triage import Triaged, select
 
 SCORES = {"decode_block": 0.87, "find_marker": 0.60, "Table::row": 0.64, "read_length": 0.31}
 
@@ -57,3 +58,12 @@ def test_estimate_needs_no_key_and_sends_nothing(tmp_path, compile_db, capsys, m
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     assert main(triage(tmp_path / "run", compile_db, "--estimate")) == 0
     assert json.loads(capsys.readouterr().out)["functions"] == 15
+
+
+def test_selection_is_the_top_share_above_the_floor():
+    scores = [0.95, 0.9, 0.9, 0.85, 0.7, 0.65, 0.61, 0.5, 0.4, None] + [0.1] * 10  # 20 functions
+    chosen = select([Triaged(f"f{i:02}", "scored", s, "") for i, s in enumerate(scores)])
+    assert [t.function_id for t in chosen if t.selected] == ["f00", "f01", "f02"]  # ceil(15% of 20)
+
+    low = select([Triaged(f"g{i:02}", "scored", s, "") for i, s in enumerate([0.62] + [0.55] * 19)])
+    assert [t.function_id for t in low if t.selected] == ["g00"]  # the share allows 3; the floor keeps 1

@@ -1,7 +1,8 @@
-"""Stage 1: score every function with one Jev question and keep those at or above the threshold (ADR 0004)."""
+"""Stage 1: score every function with one Jev question and select the project's top share (ADR 0004)."""
 
 import asyncio
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, replace
 
 from sift.code import Function
 from sift.jev import MODEL, Jev
@@ -11,7 +12,8 @@ QUESTIONS = {QUESTION_ID: {
     "type": "noul",
     "instructions": "Is this function worth a security researcher's time to inspect further for bugs?",
 }}
-THRESHOLD = 0.60  # calibrated for MODEL, QUESTIONS and function-code-only input
+THRESHOLD = 0.60  # floor, calibrated for MODEL, QUESTIONS and function-code-only input
+TOP_SHARE = 0.15  # of the project's functions; scores run higher in some projects than others
 
 
 @dataclass(frozen=True)
@@ -21,15 +23,21 @@ class Triaged:
     score: float | None
     detail: str
     input_tokens: int = 0
-
-    @property
-    def selected(self) -> bool:
-        return self.score is not None and self.score >= THRESHOLD
+    selected: bool = False
 
 
 async def triage(functions: list[Function], jev: Jev) -> list[Triaged]:
     results = await asyncio.gather(*(jev.ask(f.code, QUESTIONS) for f in functions))
-    return [_triaged(f, r) for f, r in zip(functions, results, strict=True)]
+    return select([_triaged(f, r) for f, r in zip(functions, results, strict=True)])
+
+
+def select(triaged: list[Triaged]) -> list[Triaged]:
+    """Mark functions at or above THRESHOLD that also rank in the project's TOP_SHARE."""
+    budget = math.ceil(TOP_SHARE * len(triaged))
+    passing = sorted((t for t in triaged if t.score is not None and t.score >= THRESHOLD),
+                     key=lambda t: (-t.score, t.function_id))
+    chosen = {t.function_id for t in passing[:budget]}
+    return [replace(t, selected=t.function_id in chosen) for t in triaged]
 
 
 def ranked(triaged: list[Triaged]) -> list[Triaged]:

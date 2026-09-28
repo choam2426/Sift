@@ -24,7 +24,8 @@ def main(argv=None, transport=None) -> int:
 
     scan = cfamily.scan(args.target, args.compile_db)
     if args.estimate:
-        tokens = sum(len(f.code) for f in scan.functions) // 4  # rough: ~4 characters per token
+        # C code measured at ~1.84 characters per Jev input token (Expat R_2_5_0, 2026-09-28)
+        tokens = round(sum(len(f.code) for f in scan.functions) / 1.8)
         print(json.dumps({"functions": len(scan.functions), "unanalyzed": len(scan.unanalyzed),
                           "approx_input_tokens": tokens}))
         return 0
