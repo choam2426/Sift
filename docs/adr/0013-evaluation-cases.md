@@ -16,9 +16,27 @@
 - **봉인용은 ARVO:** 봉인 사례는 파급력보다 설계 중 보지 않았다는 독립성이 중요하고, ARVO는 취약 커밋·수정 커밋·재현 입력이 갖춰진 사례가 많아 고르기 쉽다. 재현 입력은 이후 동적 검증에도 쓸 수 있다.
 - Magma는 유명 CVE를 이식한 코드라 첫 라벨에는 쓰지 않고 동적 검증을 붙일 때 다시 본다.
 
-## 사례 구성 — 제안
+## 사례 구성 — 2026-09-28 확정
 
-설계용: 7-Zip 26.01(기존 라벨), zlib, libexpat, libtiff, stb_image 또는 cJSON. 봉인용: libarchive, lwIP 또는 FreeRDP, curl. 각 사례의 리비전·수정 커밋·필수 줄·기전은 확인 후 `experiments/labels/`에 고정하며, 확인 전까지 이 목록은 제안이다.
+**설계용 5개.** 라벨은 [`experiments/labels/`](../../experiments/labels/)에 있다. 필수 줄은 취약 리비전의 소스와 수정 커밋의 diff를 직접 대조해 정했다.
+
+| 사례 | 대상·리비전 | CWE | 기억 위험 | 비고 |
+|---|---|---|---|---|
+| CVE-2026-14266 | 7-Zip 26.01 | — | 높음(여러 번 참조) | 기존 라벨 |
+| CVE-2022-37434 | zlib v1.2.12 | 787 | **높음** | 유명 CVE. 모델이 외운 것을 재현하는지 거르는 대조군으로 해석한다 |
+| CVE-2022-25315 | libexpat R_2_4_4 | 190 | 중간 | |
+| CVE-2025-9900 | libtiff v4.7.0 | 787 | 낮음 | 쓰기가 함수 포인터 호출 너머에서 일어난다 |
+| CVE-2021-42716 | stb `8b5f1f37` | 125 | 낮음~중간 | 읽기 오버플로. cJSON은 upstream 수정 커밋이 없어 제외했다 |
+
+**봉인용 3개.** ARVO(OSS-Fuzz 재현 데이터셋)에서 골랐다. 기전·파일·함수는 Git에서 제외된 `data/sealed/`에만 두고 설계 중에는 열지 않는다. lwIP는 OSS-Fuzz에 없어 FreeRDP로 대체했다.
+
+| 프로젝트 | ARVO 사례 | 충돌 유형 | 취약 커밋 | 수정 커밋 |
+|---|---|---|---|---|
+| libarchive | 42472727 | stack-buffer-overflow WRITE | `458e49358f17` | `4bd12b6f40cb` |
+| curl | 42539525 | heap-buffer-overflow WRITE | `ba67f7d65a42` | `3c630f9b0af0` |
+| FreeRDP | 42535986 | heap-buffer-overflow WRITE | `cbd2f5e65f42` | `f422ea2e56e9` |
+
+예비 사례(libarchive 42474797, curl 42484287, FreeRDP 42525170)도 같은 기록에 있다. 모두 재현 입력이 있다.
 
 ## 규칙
 
