@@ -1,6 +1,6 @@
 # 소스 관계 추출 실험에는 CodeQL을 사용한다
 
-> 재검토 상태: 2026-09-27 [ADR 0014](0014-python-asyncio-and-code-lookup.md)에서 제품의 코드 조회는 tree-sitter로 구현하고 CodeQL은 관계 추출의 비교 기준으로만 쓰기로 했다.
+> 재검토 상태: 2026-09-27 [ADR 0014](0014-python-asyncio-and-code-lookup.md)에서 CodeQL을 제품과 비교 기준 어디에도 쓰지 않기로 했다. C/C++ 추출기와 엔진이 비공개 CLI에 있고 비공개 코드에는 유료 라이선스가 필요하기 때문이다. C/C++ 코드 조회는 libclang으로 한다.
 
 > 재검토 상태: 2026-09-25 현재 아래 **직접 호출만 쓰는 첫 A 기준선**은 CodeQL 데이터베이스의 의미 관계를 충분히 사용하지 못한다는 지적에 따라 실행을 보류했다. CodeQL 데이터베이스를 코드 사실의 출처로 쓰고 취약성 판단은 Jev가 수행하는 [새 대안](../../experiments/archive/second-pass/codeql-evidence-proposal.md)의 후보 경계와 입출력을 검토한다. 아래 내용은 당시 결정과 파일럿의 기록이다.
 

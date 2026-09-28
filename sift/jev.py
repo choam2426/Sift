@@ -4,7 +4,7 @@ import asyncio
 import hashlib
 import json
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 import httpx
@@ -42,15 +42,24 @@ class Jev:
         self._limit = asyncio.Semaphore(concurrency)
         self._cache_path = cache
         self._cache = _load(cache)
+        self._inflight: dict[str, asyncio.Future] = {}
         self._remaining = max_requests
         self._retry_delay = retry_delay
-        self.sent = 0
         self.stopped: str | None = None
 
     async def ask(self, state: str, questions: dict[str, dict]) -> Result:
         key = _key(state, questions)
         if key in self._cache:
             return Result(**self._cache[key], cached=True)
+        if key in self._inflight:  # the same state is already on its way
+            return replace(await self._inflight[key], cached=True)
+        self._inflight[key] = asyncio.ensure_future(self._fresh(key, state, questions))
+        try:
+            return await self._inflight[key]
+        finally:
+            del self._inflight[key]
+
+    async def _fresh(self, key, state, questions) -> Result:
         async with self._limit:
             if self.stopped:
                 return Result("unsent", detail=self.stopped)
@@ -59,7 +68,6 @@ class Jev:
                     self.stopped = "request budget used up"
                     return Result("unsent", detail=self.stopped)
                 self._remaining -= 1
-            self.sent += 1
             result = await self._send(state, questions)
         if result.status in ("scored", "unscored"):
             self._cache[key] = {k: v for k, v in asdict(result).items() if k != "cached"}
@@ -121,6 +129,15 @@ def _key(state, questions) -> str:
 
 
 def _load(path: Path) -> dict:
-    if not path.exists():
-        return {}
-    return {row["key"]: row["result"] for row in map(json.loads, path.read_text().splitlines())}
+    text = path.read_text() if path.exists() else ""
+    if text and not text.endswith("\n"):
+        with path.open("a") as cache:  # so the next result starts on its own line
+            cache.write("\n")
+    rows = {}
+    for line in text.splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:  # a write cut short by an interruption
+            continue
+        rows[row["key"]] = row["result"]
+    return rows

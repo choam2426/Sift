@@ -29,7 +29,7 @@ class Triaged:
 
 async def triage(functions: list[Function], jev: Jev) -> list[Triaged]:
     results = await asyncio.gather(*(jev.ask(f.code, QUESTIONS) for f in functions))
-    return [_triaged(f, r) for f, r in zip(functions, results)]
+    return [_triaged(f, r) for f, r in zip(functions, results, strict=True)]
 
 
 def ranked(triaged: list[Triaged]) -> list[Triaged]:

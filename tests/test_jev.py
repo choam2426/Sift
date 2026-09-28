@@ -74,3 +74,32 @@ def test_rejects_malformed_answers(tmp_path):
     bad = {"model": "jev-1.13.0", "answers": {"review_worth_plain": {"noul": 1.5}}}
     [result], _, _ = ask(tmp_path, [(200, bad)])
     assert (result.status, result.detail) == ("error", "invalid response")
+
+
+def test_the_same_state_asked_at_once_is_sent_once(tmp_path):
+    sent = []
+
+    async def handler(request):
+        sent.append(request)
+        await asyncio.sleep(0.01)
+        return httpx.Response(200, json=RECORDED)
+
+    async def go():
+        jev = Jev("key", tmp_path / "cache.jsonl", transport=httpx.MockTransport(handler))
+        try:
+            return await asyncio.gather(jev.ask("int f(void);", QUESTIONS), jev.ask("int f(void);", QUESTIONS))
+        finally:
+            await jev.close()
+
+    first, second = asyncio.run(go())
+    assert len(sent) == 1 and first.scores == second.scores and second.cached
+
+
+def test_a_cache_line_cut_short_by_an_interruption_is_ignored(tmp_path):
+    ask(tmp_path, [(200, RECORDED)])
+    with (tmp_path / "cache.jsonl").open("a") as cache:
+        cache.write('{"key": "cut sh')
+    [result, _], _, sent = ask(tmp_path, [(200, RECORDED)], states=("int f(void);", "int g(void);"))
+    assert result.cached and len(sent) == 1
+    [_, again], _, sent = ask(tmp_path, [], states=("int f(void);", "int g(void);"))
+    assert again.cached and sent == []  # the result written after the cut line survived
