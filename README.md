@@ -7,7 +7,7 @@ Sift는 취약점 연구원의 에이전트가 큰 코드베이스에서 Jev로 
 | 제공물 | 위치 |
 |---|---|
 | 설계 | [`DESIGN.md`](DESIGN.md) |
-| 스펙과 적합성 시험 | [`spec/`](spec/) |
+| 스펙 | [`spec/`](spec/) |
 | 보일러플레이트 (참조 구현) | [`boilerplate/`](boilerplate/) |
 | 벤치 | [`bench/`](bench/) |
 | 질문 라이브러리 | [`questions/`](questions/) |
