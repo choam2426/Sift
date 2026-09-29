@@ -7,6 +7,8 @@
 - **미정:** 아직 정하지 않은 것.
 - **참고:** 참조 구현이 하는 것 중 요구사항은 아닌 것. 다른 언어나 도구로 구현할 때 비용 대비 효과를 따져 고른다.
 
+스펙은 구축된 분석기의 경계, 즉 무엇을 보장하고 무엇을 밖으로 내놓는지만 정한다. 어떻게 구현할지, 대상 범위와 예산처럼 무엇을 합의할지는 정하지 않는다. 대상 범위, Jev 예산, 연구 대상 플랫폼처럼 결과를 크게 바꾸는 선택은 구축할 때 사용자와 합의하고, 합의한 내용을 실행 기록에 남긴다.
+
 ## 1. 용어
 
 - **분석 유닛:** 본문이 있는 함수 정의 하나. 같은 원문 범위는 구성이 달라도 한 유닛이다.
@@ -72,13 +74,15 @@
 **P-BUNDLE 묶음 규칙.** 출발점에서 어떤 관계를 따라 무엇을 넣을지, 한도에 걸리면 무엇부터 뺄지. 좋은 규칙은 대상의 버그 모양에 달려 있다. 벤치의 도달률(버그의 필수 줄이 묶음 안에 있는가)로 고른다.
 - *우리가 쓴 후보:* A(출발 함수 + 피호출자), B(A + 호출자), D(B + 호출자의 피호출자), E(A + 피호출자의 피호출자). 가까운 관계부터 넣었다. 설계용 라벨 5개에서 A는 3개, D와 E는 4개 사례에서 필수 줄을 모두 담았고, B는 A보다 커지기만 했다. 한 사례(stb)는 어떤 후보로도 다 담지 못했다([ADR 0016](../docs/adr/0016-second-pass-bundle-principles.md), [실험 요약](../experiments/README.md)).
 
-**P-BUNDLE-BUDGET 묶음 크기 한도.** 모델의 입력 한도와 코드의 글자당 토큰 비율로 정한다.
-- *우리가 쓴 값:* `jev-1.13.0`은 `state`와 질문 합계 32k토큰이고, C 코드는 약 1.84글자당 1토큰이어서 약 55,000자로 잡았다.
+**P-BUNDLE-BUDGET 묶음 크기 한도.** 모델의 입력 한도와 대상 코드의 글자당 토큰 비율로 정한다. 비율은 대상마다 다르므로 1차 사용량으로 잰다.
+- *우리가 쓴 값:* `jev-1.13.0`의 `state`와 질문 합계 32k토큰. 비율은 Expat에서 약 1.84글자/토큰, libtiff에서 약 3.99글자/토큰이었다.
 
 **P-BUNDLE-QUESTION 2차 질문 (미정).**
 - *우리가 시험한 것:* 7-Zip 4×5 비교에서 P4(상태 전이), P2(함수 사이 계약), P3(검사와 사용)의 순으로 필수 코드를 담은 후보를 앞에 뒀다. 사례 하나의 부분 결과다.
 
 ## 7. Jev 호출
+
+API의 요청·응답 형식, 오류, 한도는 Jev의 공개 문서(https://docs.typesafe.ai)를 따른다.
 
 - **JEV-1** 결과를 (모델, `state`, 질문)으로 캐시하고, 같은 실행 디렉터리로 다시 실행하면 캐시된 요청은 보내지 않는다. 중단된 뒤에도 재개된다. 오류는 캐시하지 않는다.
 - **JEV-2** 요청 수 상한에 닿으면 이후 요청은 보내지 않고 "미전송"으로 기록하며, 실행은 멈췄음을 알리는 상태로 끝난다.
@@ -106,7 +110,7 @@ JSON Lines 파일은 한 줄에 한 JSON 객체다.
 | `selected.jsonl` | `triage.jsonl`과 같은 필드, 선별된 것만 순위순 |
 | `jev-cache.jsonl` | `key`, `result`(`status`, `scores`, `model`, `detail`, `usage`) |
 
-`summary`는 `functions`, `unanalyzed`(이유별 개수), `parses`, `failed_parses`, `error_diagnostics`, `scored`, `unscored`, `error`, `unsent`, `selected`, `input_tokens`, `stopped`다. `reason`은 "inactive in every configuration", "no configuration parsed this file", "body produced by a macro" 중 하나다. 2차 출력과 판정 기록의 형식은 미정이다(BND-5, COV-3).
+`summary`는 `functions`, `unanalyzed`(이유별 개수), `parses`, `failed_parses`, `error_diagnostics`, `scored`, `unscored`, `error`, `unsent`, `selected`, `input_tokens`, `stopped`다. `reason`은 자유 문자열이다. 참조 구현은 "inactive in every configuration", "no configuration parsed this file", "body produced by a macro"를 쓰고, 합의한 범위 밖의 코드도 이유와 함께 여기에 적을 수 있다. 2차 출력과 판정 기록의 형식은 미정이다(BND-5, COV-3).
 
 ## 9. 적합성 시험
 
