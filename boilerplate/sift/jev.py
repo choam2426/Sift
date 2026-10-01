@@ -27,7 +27,10 @@ class Result:
 
 
 class Jev:
-    """Ask Noul questions about one state per request.
+    """Ask Noul and Choice questions about one state per request.
+
+    A Noul answer is scored under the question's name; a Choice answer is scored as
+    one probability per option under "<name>/<option>".
 
     Scored and unscored results are cached by (model, state, questions), so a rerun
     resumes without resending. Once an account error occurs or max_requests is used
@@ -115,7 +118,15 @@ def api_key(env_file: Path = Path(".env")) -> str:
 def _parse(response: httpx.Response, questions) -> Result:
     try:
         raw = response.json()
-        scores = {name: raw["answers"][name]["noul"] for name in questions}
+        scores = {}
+        for name, question in questions.items():
+            answer = raw["answers"][name]
+            if question.get("type") == "choice":
+                if set(answer["probabilities"]) != set(question["criteria"]):
+                    raise ValueError
+                scores.update({f"{name}/{option}": p for option, p in answer["probabilities"].items()})
+            else:
+                scores[name] = answer["noul"]
         if not all(type(s) in (int, float) and 0 <= s <= 1 for s in scores.values()):
             raise ValueError
         return Result("scored", scores, raw["model"], usage=raw.get("usage"))

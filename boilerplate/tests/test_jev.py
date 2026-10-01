@@ -10,7 +10,7 @@ RECORDED = json.loads((Path(__file__).parent / "fixtures" / "jev-response.json")
 QUESTIONS = {"review_worth_plain": {"type": "noul", "instructions": "?"}}
 
 
-def ask(tmp_path, responses, states=("int f(void);",), **options):
+def ask(tmp_path, responses, states=("int f(void);",), questions=QUESTIONS, **options):
     """Send each state through a fake API that replays `responses` in order."""
     replies, sent = list(responses), []
 
@@ -23,7 +23,7 @@ def ask(tmp_path, responses, states=("int f(void);",), **options):
         jev = Jev("key", tmp_path / "cache.jsonl", transport=httpx.MockTransport(handler),
                   retry_delay=0, **options)
         try:
-            return [await jev.ask(s, QUESTIONS) for s in states], jev, sent
+            return [await jev.ask(s, questions) for s in states], jev, sent
         finally:
             await jev.close()
 
@@ -73,6 +73,22 @@ def test_errors_are_not_cached(tmp_path):
 def test_rejects_malformed_answers(tmp_path):
     bad = {"model": "jev-1.13.0", "answers": {"review_worth_plain": {"noul": 1.5}}}
     [result], _, _ = ask(tmp_path, [(200, bad)])
+    assert (result.status, result.detail) == ("error", "invalid response")
+
+
+CHOICE = {"kind": {"type": "choice", "instructions": "?", "criteria": {"bug": "a", "fine": "b"}}}
+
+
+def test_choice_answers_are_scored_per_option(tmp_path):
+    answer = {"choice": "bug", "probabilities": {"bug": 0.7, "fine": 0.3}, "confidence": 0.4}
+    reply = {"model": "jev-1.13.0", "answers": {"review_worth_plain": {"noul": 0.6}, "kind": answer}}
+    [result], _, _ = ask(tmp_path, [(200, reply)], questions={**QUESTIONS, **CHOICE})
+    assert result.scores == {"review_worth_plain": 0.6, "kind/bug": 0.7, "kind/fine": 0.3}
+
+
+def test_choice_answers_with_other_options_are_rejected(tmp_path):
+    reply = {"model": "jev-1.13.0", "answers": {"kind": {"choice": "x", "probabilities": {"x": 1.0}}}}
+    [result], _, _ = ask(tmp_path, [(200, reply)], questions=CHOICE)
     assert (result.status, result.detail) == ("error", "invalid response")
 
 
