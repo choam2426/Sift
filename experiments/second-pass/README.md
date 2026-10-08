@@ -4,6 +4,8 @@
 
 [ADR 0026](../../docs/adr/0026-prioritize-callsite-candidates-and-adaptive-expansion.md)의 첫 단계로, 1차에서 선택된 caller의 소스 호출지점을 공통 원자로 만들고 P·R·C 경계별 후보 목록을 생성한다. 공통 추출과 병합은 `boilerplate/sift/candidates.py`에 있고 이 디렉터리는 실행 조합만 맡는다.
 
+> 2026-10-08: 기존 묶음과 P·R·C 경계를 배제하고 다시 생각한 2차 구조 후보는 [stage2-structure-proposals.md](stage2-structure-proposals.md)에 제안으로 있다. 아직 합의되지 않았다.
+
 `prepare_boundaries.py`는 모델이나 네트워크를 호출하지 않는다. 입력 1차 실행의 manifest, 호출 관계와 선택 목록 해시를 출력 manifest에 기록한다.
 
 ```sh
