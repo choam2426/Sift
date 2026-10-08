@@ -68,7 +68,9 @@ class _State:
         self.seen = set()                 # paths some translation unit entered
         self.tried = set()                # (source, label) macro flips already parsed
         self.usr = defaultdict(set)       # clang USR -> (path, end) of its definitions, one per configuration
-        self.calls = {}                   # (path, end, call offset) -> (line, callee USR, name, passes)
+        # One source call may resolve differently across configurations. Keep those
+        # interpretations separate here; sift.candidates joins them into one source atom.
+        self.calls = {}                   # (caller path, end, call path, offset, callee USR) -> call facts
         self.configs, self.parses, self.errors, self.failed = [], 0, 0, 0
 
     def merge(self, results):
@@ -89,8 +91,16 @@ class _State:
                 entry[1].add(result["label"])
                 if start < entry[2]:
                     entry[2:4] = [start, first]
-            for path, end, offset, line, usr, name, passes in result["calls"]:
-                self.calls.setdefault((path, end, offset), (line, usr, name, passes))
+            for (path, end, offset, call_path, line, start_column, call_end_line,
+                 end_column, code, region, usr, name, passes) in result["calls"]:
+                key = (path, end, call_path, offset, usr)
+                entry = self.calls.setdefault(
+                    key,
+                    [line, start_column, call_end_line, end_column, code, region,
+                     name, False, set()],
+                )
+                entry[7] = entry[7] or passes
+                entry[8].add(result["label"])
 
     def flips(self, estimates, base):
         """Configurations that define or undefine the macros guarding still-skipped definitions."""
@@ -148,13 +158,21 @@ class _State:
                 if any(line.strip() and not line.lstrip().startswith("#") for line in text[first - 1:last]):
                     unanalyzed.append(Unanalyzed(path, first, last, None, "inactive in every configuration"))
         calls = []
-        for (path, end, _), (line, usr, name, passes) in sorted(self.calls.items()):
+        for ((path, end, call_path, _, usr),
+             (line, start_column, call_end_line, end_column, code, region,
+              name, passes, configs)) in sorted(
+                  self.calls.items(), key=lambda item: tuple(str(part) for part in item[0])
+              ):
             if (path, end) not in ids:
                 continue  # the caller's body comes from a macro
             targets = sorted(ids[k] for k in self.usr.get(usr, ()) if k in ids)
             kind = "indirect" if usr is None else "direct" if targets else "external"
             for callee in targets or [None]:
-                calls.append(Call(ids[(path, end)], line, kind, callee, name, passes))
+                calls.append(Call(
+                    ids[(path, end)], line, kind, callee, name, passes,
+                    call_path, start_column, call_end_line, end_column, code, region,
+                    tuple(sorted(configs)),
+                ))
         return Scan(functions, unanalyzed, self.configs, self.parses, self.errors, self.failed, calls)
 
 
@@ -324,7 +342,7 @@ def _parse(task):
             extent = cursor.extent
             functions.append((path, extent.start.offset, extent.end.offset,
                               (extent.start.line, extent.end.line), _qualified(cursor), cursor.get_usr()))
-            calls += [(path, extent.end.offset, *call) for call in _calls(cursor)]
+            calls += [(path, extent.end.offset, *call) for call in _calls(cursor, relative)]
         elif cursor.kind.is_declaration():  # classes, templates, namespaces, friends, extern "C"
             stack.extend(cursor.get_children())
 
@@ -341,13 +359,12 @@ def _parse(task):
     return {"label": label, "functions": functions, "calls": calls, "files": files, "errors": errors, "failed": 0}
 
 
-def _calls(function):
-    """(offset, line, callee USR or None, callee name, passes_values) for each call in a body."""
+def _calls(function, relative):
+    """Source-backed call facts, including the innermost lexical control arm."""
     usr = function.get_usr()
     found = []
-    for node in function.walk_preorder():
-        if node.kind != ci.CursorKind.CALL_EXPR:
-            continue
+
+    def record(node, region):
         target = node.referenced
         direct = target is not None and target.kind in KINDS
         passes = any(ref.kind == ci.CursorKind.DECL_REF_EXPR and ref.referenced is not None
@@ -355,9 +372,64 @@ def _calls(function):
                      and ref.referenced.semantic_parent is not None
                      and ref.referenced.semantic_parent.get_usr() == usr
                      for arg in node.get_arguments() for ref in arg.walk_preorder())
-        found.append((node.extent.start.offset, node.location.line, target.get_usr() if direct else None,
-                      _written(node.location) or (target.spelling if target is not None else ""), passes))
+        start, end = node.extent.start, node.extent.end
+        call_path = relative(start.file) or ""
+        code = _extent_source(start, end)
+        found.append((
+            start.offset, call_path, start.line, start.column, end.line, end.column,
+            code, region, target.get_usr() if direct else None,
+            _written(node.location) or (target.spelling if target is not None else ""),
+            passes,
+        ))
+
+    def visit(node, region):
+        if node.kind in (ci.CursorKind.CASE_STMT, ci.CursorKind.DEFAULT_STMT,
+                         ci.CursorKind.CXX_CATCH_STMT):
+            region = _region(node, relative) or region
+        children = list(node.get_children())
+        arm_regions = _arm_regions(node, children, relative)
+        for index, child in enumerate(children):
+            child_region = arm_regions.get(index, region)
+            if child.kind == ci.CursorKind.CALL_EXPR:
+                record(child, child_region)
+            visit(child, child_region)
+
+    visit(function, None)
     return found
+
+
+def _arm_regions(parent, children, relative):
+    """The source spans used by the experimental R grouping policy.
+
+    These are lexical regions, not claims about semantic control dependence.
+    """
+    statement_indexes = [i for i, child in enumerate(children) if child.kind.is_statement()]
+    if parent.kind == ci.CursorKind.IF_STMT:
+        chosen = statement_indexes
+    elif parent.kind in (ci.CursorKind.FOR_STMT, ci.CursorKind.CXX_FOR_RANGE_STMT,
+                         ci.CursorKind.WHILE_STMT, ci.CursorKind.DO_STMT):
+        chosen = statement_indexes[-1:]
+    else:
+        chosen = []
+    return {
+        index: region
+        for index in chosen
+        if (region := _region(children[index], relative)) is not None
+    }
+
+
+def _region(node, relative):
+    start, end = node.extent.start, node.extent.end
+    path = relative(start.file)
+    if path is None:
+        return None
+    return f"{node.kind.name}:{path}:{start.line}:{start.column}-{end.line}:{end.column}"
+
+
+def _extent_source(start, end) -> str:
+    if start.file is None or end.file is None or start.file.name != end.file.name:
+        return ""
+    return Path(start.file.name).read_bytes()[start.offset:end.offset].decode(errors="replace")
 
 
 def _written(location) -> str:

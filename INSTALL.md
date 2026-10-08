@@ -1,6 +1,6 @@
 # 설치 가이드
 
-2026-09-29 상태: 작성 전. 에이전트가 따라 할 구축 절차다.
+2026-10-01 상태: 작성 전. 최종 목표는 연구 결과를 바탕으로 사용자가 분석 대상에 맞는 Sift를 구축할 수 있는 가이드를 제공하는 것이다([ADR 0019](docs/adr/0019-systemone-vulnerability-research-goal.md)). 아래는 기존 선별 접근에서 에이전트가 따라 할 구축 절차의 초안이며, 연구 결과에 맞춰 갱신한다.
 
 1. 환경 준비: Python, uv, libclang(C/C++), Jev API 키(`.env`의 `TYPESAFE_API_KEY`)
 2. 대상 파악과 구성: 언어, 빌드 방식, compile DB, 대상 범위, 버그 유형과 질문

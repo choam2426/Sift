@@ -15,7 +15,7 @@
 - **구성:** 한 번의 파싱이 보는 코드의 모습. C/C++에서는 컴파일 명령, 타깃, 매크로 정의의 조합이다.
 - **대상:** 분석할 디렉터리(루트). 루트 밖의 정의는 유닛이 아니다.
 - **출발점:** 1차에서 선별된 유닛.
-- **묶음:** 출발점과 규칙으로 고른 관련 유닛들. 2차에서 Jev가 묶음 전체를 평가한다.
+- **관계 후보:** 1차 출발점에서 만든 caller-callee 관계와 그 호출지점·관련 코드. 2차에서 Jev가 평가하고 필요하면 미리 정한 관계로 확장한다.
 - **실행 디렉터리:** 한 대상의 한 번의 스캔이 남기는 모든 기록. 같은 디렉터리로 다시 실행하면 이어서 진행한다.
 
 ## 2. 함수 추출
@@ -63,21 +63,21 @@
 **P-SELECT 선별 규칙.** 점수로 출발점을 고르는 규칙과 그 값. 출발점 수는 2차 비용과 에이전트가 볼 양을 정한다. 점수 분포는 대상마다 다르다.
 - *우리가 쓴 값:* 하한 0.60이면서 대상 안 점수 상위 15%(전체 유닛 수 기준, 올림). 하한만 쓰면 선별량이 대상마다 13.7%~62.5%로 흔들렸다. 1차 실험의 6개 사례 모두에서 결함에 닿는 함수가 상위 15% 안에 들었고, 이를 정할 때 쓰지 않은 4개 사례에서는 결함 지점 3개가 들어가고 libtiff(24.5%)가 빠졌다. 절대 하한 0.80은 urllib3를 놓쳐 기각했다.
 
-## 6. 2차 묶음 재선별
+## 6. 2차 관련 코드 재선별
 
-- **BND-1** 출발점마다 묶음 하나를 만들고 묶음 전체에 점수를 준다([ADR 0007](../docs/adr/0007-second-pass-scores-related-code-group.md)).
-- **BND-2** 함수 본문을 자르지 않는다. 한도 때문에 넣지 못한 관련 유닛과 `indirect` 호출은 시작 패킷에 "넣지 못한 관계"로 적는다.
-- **BND-3** 출력은 에이전트가 볼 순서와 출발점마다의 시작 패킷(묶음의 유닛, 넣지 못한 관계, 미해결 호출)이다.
-- **BND-4** 묶음 규칙과 파라미터, 2차 질문을 실행 기록에 남긴다.
-- **BND-5 (미정)** 2차 질문과 점수를 합치는 방법, 1차 순위만 쓰는 기준선과의 비교 방법.
+- **BND-1** 호출 원문의 위치와 표현을 중심으로 구성·callee 해석이 바뀌어도 유지되는 호출지점 원자 ID를 만든다. caller, 구성별 callee, 호출 종류와 매크로 위치는 속성으로 둔다([ADR 0026](../docs/adr/0026-prioritize-callsite-candidates-and-adaptive-expansion.md)).
+- **BND-2** 같은 규칙으로 호출지점별 문맥을 만든 뒤 원자를 후보로 병합한다. 포함한 코드의 출처, 계산하지 못한 관계와 `indirect` 호출을 기록하고, 문맥 부족을 취약성 부재로 해석하지 않는다.
+- **BND-3** 후보 ID는 경계 정책과 정렬된 구성원 원자 ID로 결정한다. 출력은 에이전트가 볼 순서와 후보별 시작 패킷(출발점, 구성원 호출지점, 관계, 포함한 코드, 넣지 못한 관계, 미해결 호출)이다.
+- **BND-4** 원자·문맥 추출, 후보 병합·확장 규칙과 파라미터, 2차 질문을 실행 기록에 남긴다.
+- **BND-5** 같은 후보 패킷에서 1차 점수 기반 기존 순서, 2차 Jev 순서와 무작위 진단 순서를 비교한다. 여러 단계의 점수 결합 방법은 실행 전에 고정한다.
 
-**P-BUNDLE 묶음 규칙.** 출발점에서 어떤 관계를 따라 무엇을 넣을지, 한도에 걸리면 무엇부터 뺄지. 좋은 규칙은 대상의 버그 모양에 달려 있다. 벤치의 도달률(버그의 필수 줄이 묶음 안에 있는가)로 고른다.
-- *우리가 쓴 후보:* A(출발 함수 + 피호출자), B(A + 호출자), D(B + 호출자의 피호출자), E(A + 피호출자의 피호출자). 가까운 관계부터 넣었다. 설계용 라벨 5개에서 A는 3개, D와 E는 4개 사례에서 필수 줄을 모두 담았고, B는 A보다 커지기만 했다. 한 사례(stb)는 어떤 후보로도 다 담지 못했다([ADR 0016](../docs/adr/0016-second-pass-bundle-principles.md), [실험 요약](../experiments/README.md)).
+**P-CANDIDATE 후보·확장 규칙.** 호출지점별로 어떤 정의·검사·제어 의존을 넣고, 원자를 어떤 경계로 병합하며, 적응형 조건에서 어떤 관계를 다음 상태로 확장할지 정한다. 좋은 규칙은 대상의 버그 모양에 달려 있으며, 충분한 근거에 도달한 고유 결함 수와 실제 비용, 문맥 충실도로 고른다.
+- *현재 우선 후보:* 관련 문맥 M1을 호출지점별로 만든 뒤 P(caller-callee 전체), R(같은 어휘적 제어영역), C(개별 호출지점)를 비교한다. 구성원 원자 집합이 같은 패킷은 한 번만 평가한다. 경계 선택은 개발 결함 그룹 전부와 다중 호출 P 그룹의 결정적 층화 표본 200개에서 시작해, 열세 정책을 중단하고 누적 800개로 늘린다. 우승 경계 W에서 최소 문맥 M0와 크기를 맞춘 대조 문맥 MX를 추가해 M1의 효과를 확인하고, W만 전수 실행한다. 결과가 애매할 때만 3×3 전체 비교로 넓힌다. 이후 같은 후보의 기존 순서와 Jev 재순위, 마지막으로 고정 확장과 적응형 확장을 같은 예산·harness·모델로 비교한다. 큰 묶음 A·B·D·E는 기존 비교 기록으로 남기고 새 기본값에서 제외했다([ADR 0026](../docs/adr/0026-prioritize-callsite-candidates-and-adaptive-expansion.md), [실험 요약](../experiments/README.md)).
 
-**P-BUNDLE-BUDGET 묶음 크기 한도.** 모델의 입력 한도와 대상 코드의 글자당 토큰 비율로 정한다. 비율은 대상마다 다르므로 1차 사용량으로 잰다.
+**P-CANDIDATE-BUDGET 후보 입력 한도.** 모델의 입력 한도와 대상 코드의 글자당 토큰 비율로 정한다. 비율은 대상마다 다르므로 1차 사용량으로 잰다.
 - *우리가 쓴 값:* `jev-1.13.0`의 `state`와 질문 합계 32k토큰. 비율은 Expat에서 약 1.84글자/토큰, libtiff에서 약 3.99글자/토큰이었다.
 
-**P-BUNDLE-QUESTION 2차 질문 (미정).**
+**P-CANDIDATE-QUESTION 2차 질문 (미정).**
 - *우리가 시험한 것:* 7-Zip 4×5 비교에서 P4(상태 전이), P2(함수 사이 계약), P3(검사와 사용)의 순으로 필수 코드를 담은 후보를 앞에 뒀다. 사례 하나의 부분 결과다.
 
 ## 7. Jev 호출
@@ -105,12 +105,12 @@ JSON Lines 파일은 한 줄에 한 JSON 객체다.
 | `manifest.json` | `target`, `revision`, `started`, `model`, `questions_sha256`, `selection`(규칙 이름과 파라미터), `configs`(구성 이름 목록), `coverage_limits`(구현이 보고할 수 없는 못 본 코드의 종류, COV-1), `summary` |
 | `functions.jsonl` | `id`(`경로:시작 줄:이름`), `name`, `path`, `start_line`, `end_line`, `configs` |
 | `unanalyzed.jsonl` | `path`, `start_line`, `end_line`, `name`(없으면 null), `reason` |
-| `calls.jsonl` | `caller`, `line`, `kind`, `callee`(direct가 아니면 null), `callee_name`, `passes_values` |
+| `calls.jsonl` | `caller`, `line`, `kind`, `callee`(direct가 아니면 null), `callee_name`, `passes_values`, 호출 원문의 `path`·열·끝 위치·`code`, `control_region`, `configs` |
 | `triage.jsonl` | `function_id`, `status`(scored·unscored·error·unsent), `score`, `detail`, `input_tokens`, `selected` |
 | `selected.jsonl` | `triage.jsonl`과 같은 필드, 선별된 것만 순위순 |
 | `jev-cache.jsonl` | `key`, `result`(`status`, `scores`, `model`, `detail`, `usage`) |
 
-`summary`는 `functions`, `unanalyzed`(이유별 개수), `parses`, `failed_parses`, `error_diagnostics`, `scored`, `unscored`, `error`, `unsent`, `selected`, `input_tokens`, `stopped`다. `reason`은 자유 문자열이다. 참조 구현은 "inactive in every configuration", "no configuration parsed this file", "body produced by a macro"를 쓰고, 합의한 범위 밖의 코드도 이유와 함께 여기에 적을 수 있다. 2차 출력과 판정 기록의 형식은 미정이다(BND-5, COV-3).
+`summary`는 `functions`, `unanalyzed`(이유별 개수), `parses`, `failed_parses`, `error_diagnostics`, `scored`, `unscored`, `error`, `unsent`, `selected`, `input_tokens`, `stopped`다. `reason`은 자유 문자열이다. 참조 구현은 "inactive in every configuration", "no configuration parsed this file", "body produced by a macro"를 쓰고, 합의한 범위 밖의 코드도 이유와 함께 여기에 적을 수 있다. 2차 호출지점 원자와 P·R·C 경계 목록은 [구조 준비 실험](../experiments/second-pass/) 형식을 사용한다. M0·M1·MX 패킷, 점수와 판정 기록의 형식은 아직 정하지 않았다(COV-3).
 
 ## 9. 점검 항목
 

@@ -28,7 +28,7 @@
 ## 알려진 한계
 
 - libsndfile의 SND006·SND007·SND024는 `src/flac.c`에 있다. 본문이 `#if HAVE_EXTERNAL_XIPH_LIBS` 안에 있고 설정 헤더가 이 매크로를 `0`으로 정의해, 명령줄 `-D`로 켜도 덮인다. 추출은 "inactive in every configuration"으로 보고한다. 외부 FLAC 헤더를 주고 다시 configure해야 닿는다.
-- 버그는 공개된 과거 CVE를 옮겨 넣은 것이다. 모델이 알아볼 수 있으므로 절대 성공률보다 같은 조건 사이의 비교에 쓴다.
+- 버그는 공개된 과거 CVE를 옮겨 넣은 것이다. 모델이 알아볼 수 있으므로 구현·구성 개발과 같은 조건 사이의 비교에 쓴다. 새 취약점 발견 효과의 판정군으로 쓰지 않는다([ADR 0021](../../docs/adr/0021-prospective-cases-for-novel-discovery.md)).
 - 대상 리비전은 2021년 중반이다.
 
 결과는 [실험 요약](../../experiments/README.md)에 있다.

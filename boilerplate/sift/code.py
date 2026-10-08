@@ -49,6 +49,13 @@ class Call:
     callee: str | None  # Function.id for direct calls
     callee_name: str    # spelling; for indirect calls the pointer's field or variable, if any
     passes_values: bool  # an argument uses one of the caller's parameters
+    path: str = ""      # source spelling of the call; empty when libclang cannot locate it
+    start_column: int = 0
+    end_line: int = 0
+    end_column: int = 0
+    code: str = ""      # exact call-expression source when it is available
+    control_region: str | None = None  # innermost lexical branch/loop arm
+    configs: tuple[str, ...] = ()
 
 
 @dataclass
