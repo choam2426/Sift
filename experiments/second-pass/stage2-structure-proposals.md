@@ -1,6 +1,6 @@
 # 2차 구조 후보 다섯 가지 (제안)
 
-상태: 2026-10-08 **제안. 합의되지 않았다.** 기존 묶음 방식(A·B·D·E)과 [ADR 0026](../../docs/adr/0026-prioritize-callsite-candidates-and-adaptive-expansion.md)의 호출지점 경계(P·R·C)를 일단 배제하고, 효과적인 2차 구조를 처음부터 다시 생각한 후보다. 채택하면 ADR로 옮기고 이 문서는 근거로 남긴다.
+상태: 2026-10-08 제안. **같은 날 2번(싱크 역방향 슬라이스)을 첫 구현 대상으로 채택했다([ADR 0027](../../docs/adr/0027-sink-slices-with-own-dataflow-library.md)).** 나머지 후보는 미결로 남는다. 기존 묶음 방식(A·B·D·E)과 [ADR 0026](../../docs/adr/0026-prioritize-callsite-candidates-and-adaptive-expansion.md)의 호출지점 경계(P·R·C)를 일단 배제하고, 효과적인 2차 구조를 처음부터 다시 생각한 후보다. 채택하면 ADR로 옮기고 이 문서는 근거로 남긴다.
 
 ## 출발점이 되는 사실
 

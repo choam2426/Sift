@@ -7,8 +7,10 @@ undefined. Whatever no configuration reached is reported as unanalyzed.
 """
 
 import ctypes
+import hashlib
 import json
 import os
+import pickle
 import re
 import shlex
 import subprocess
@@ -19,7 +21,8 @@ from pathlib import Path
 
 import clang.cindex as ci
 
-from sift.code import Call, Function, Scan, Unanalyzed, definitions
+from sift import dataflow
+from sift.code import Body, Call, Function, Scan, Unanalyzed, definitions
 
 SOURCES = {".c", ".cc", ".cpp", ".cxx"}
 TARGETS = ("x86_64-linux-gnu", "aarch64-linux-gnu", "i686-linux-gnu", "x86_64-pc-windows-msvc")
@@ -34,7 +37,10 @@ DIRECTIVE = re.compile(r"\s*#\s*(if|ifdef|ifndef|elif|endif)\b(.*)")
 IDENT = re.compile(r"\b(?!defined\b)[A-Za-z_]\w*\b")
 
 
-def scan(root: Path, compile_dbs: list[Path], workers: int | None = None) -> Scan:
+def scan(root: Path, compile_dbs: list[Path], workers: int | None = None,
+         dataflow: bool = False) -> Scan:
+    """Functions and calls in every reachable configuration; with `dataflow`, also every
+    function's configuration-specific body for sift.dataflow, lowered in the same parses."""
     root = root.resolve()
     commands = _commands(root, compile_dbs)
     if not commands:
@@ -49,8 +55,8 @@ def scan(root: Path, compile_dbs: list[Path], workers: int | None = None) -> Sca
     tasks = base + [(p, _retarget(a, t), f"target {t}") for p, a, _ in base for t in TARGETS]
     with ProcessPoolExecutor(workers, initializer=_load_libclang) as pool:
         def parse_all(tasks):
-            state.merge(pool.map(_parse, [(str(root), str(p), a + _system_includes(p.suffix != ".c"), label)
-                                          for p, a, label in tasks]))
+            state.merge(pool.map(_parse, [(str(root), str(p), a + _system_includes(p.suffix != ".c"), label,
+                                           dataflow) for p, a, label in tasks]))
         parse_all(tasks)
         estimates = definitions(root)
         for _ in range(FLIP_ROUNDS):
@@ -71,6 +77,8 @@ class _State:
         # One source call may resolve differently across configurations. Keep those
         # interpretations separate here; sift.candidates joins them into one source atom.
         self.calls = {}                   # (caller path, end, call path, offset, callee USR) -> call facts
+        self.bodies = defaultdict(dict)   # (path, end) -> lowering digest -> [lowering, configs]
+        self.addressed = set()            # functions whose address a global initializer takes
         self.configs, self.parses, self.errors, self.failed = [], 0, 0, 0
 
     def merge(self, results):
@@ -101,6 +109,11 @@ class _State:
                 )
                 entry[7] = entry[7] or passes
                 entry[8].add(result["label"])
+            for path, end, digest, ir in result.get("bodies", ()):
+                entry = self.bodies[(path, end)].setdefault(digest, [ir, set()])
+                entry[0] = entry[0] or ir
+                entry[1].add(result["label"])
+            self.addressed.update(result.get("addressed", ()))
 
     def flips(self, estimates, base):
         """Configurations that define or undefine the macros guarding still-skipped definitions."""
@@ -173,7 +186,11 @@ class _State:
                     call_path, start_column, call_end_line, end_column, code, region,
                     tuple(sorted(configs)),
                 ))
-        return Scan(functions, unanalyzed, self.configs, self.parses, self.errors, self.failed, calls)
+        bodies = [Body(ids[key], tuple(sorted(configs)), ir)
+                  for key, variants in sorted(self.bodies.items()) if key in ids
+                  for _, (ir, configs) in sorted(variants.items())]
+        return Scan(functions, unanalyzed, self.configs, self.parses, self.errors, self.failed, calls,
+                    bodies, tuple(sorted(self.addressed)))
 
 
 def _commands(root: Path, compile_dbs: list[Path]) -> list[tuple[Path, tuple[str, ...]]]:
@@ -291,6 +308,9 @@ def _line_count(path: Path) -> int:
 
 # ---- worker process -------------------------------------------------------------------
 
+_SENT = set()  # in a worker: digests of the lowerings it has sent
+
+
 class _RangeList(ctypes.Structure):
     _fields_ = [("count", ctypes.c_uint), ("ranges", ctypes.POINTER(ci.SourceRange))]
 
@@ -302,6 +322,15 @@ def _load_libclang():
     lib.clang_getAllSkippedRanges.restype = ctypes.POINTER(_RangeList)
     lib.clang_getAllSkippedRanges.argtypes = [ci.TranslationUnit]
     lib.clang_disposeSourceRangeList.argtypes = [ctypes.POINTER(_RangeList)]
+    # used by sift.dataflow; the Python bindings do not expose them
+    lib.clang_getCursorUnaryOperatorKind.argtypes = [ci.Cursor]
+    lib.clang_getCursorUnaryOperatorKind.restype = ctypes.c_int
+    lib.clang_Cursor_getVarDeclInitializer.argtypes = [ci.Cursor]
+    lib.clang_Cursor_getVarDeclInitializer.restype = ci.Cursor
+    lib.clang_Cursor_hasVarDeclGlobalStorage.argtypes = [ci.Cursor]
+    lib.clang_Cursor_hasVarDeclGlobalStorage.restype = ctypes.c_int
+    lib.clang_getSpellingLocation.argtypes = [ci.SourceLocation, ctypes.POINTER(ci.c_object_p)] + \
+        [ctypes.POINTER(ctypes.c_uint)] * 3
 
 
 def libclang_path() -> str:
@@ -321,7 +350,7 @@ def libclang_path() -> str:
 
 
 def _parse(task):
-    root, source, args, label = task
+    root, source, args, label, flow = task
     root = Path(root)
     try:
         tu = ci.Index.create().parse(source, args=list(args), options=PARSE_OPTIONS)
@@ -332,7 +361,7 @@ def _parse(task):
         path = Path(file.name).resolve() if file is not None else None
         return path.relative_to(root).as_posix() if path and path.is_relative_to(root) else None
 
-    functions, calls = [], []
+    functions, calls, bodies, addressed = [], [], [], set()
     stack = list(tu.cursor.get_children())
     while stack:
         cursor = stack.pop()
@@ -343,7 +372,18 @@ def _parse(task):
             functions.append((path, extent.start.offset, extent.end.offset,
                               (extent.start.line, extent.end.line), _qualified(cursor), cursor.get_usr()))
             calls += [(path, extent.end.offset, *call) for call in _calls(cursor, relative)]
+            if flow:
+                ir = dataflow.lower(cursor, relative, _source)
+                digest = hashlib.sha256(pickle.dumps(ir, protocol=5)).hexdigest()
+                # a header's inline function lowers alike in many translation units; each
+                # worker sends a lowering once, and results are merged in task order
+                bodies.append((path, extent.end.offset, digest, None if digest in _SENT else ir))
+                _SENT.add(digest)
         elif cursor.kind.is_declaration():  # classes, templates, namespaces, friends, extern "C"
+            if flow and cursor.kind == ci.CursorKind.VAR_DECL:  # function tables in initializers
+                addressed.update(ref.referenced.get_usr() for ref in cursor.walk_preorder()
+                                 if ref.kind == ci.CursorKind.DECL_REF_EXPR and ref.referenced is not None
+                                 and ref.referenced.kind in KINDS)
             stack.extend(cursor.get_children())
 
     files = {relative(ci.File.from_name(tu, source)): []}
@@ -356,7 +396,8 @@ def _parse(task):
     ci.conf.lib.clang_disposeSourceRangeList(ranges)
     files.pop(None, None)
     errors = sum(d.severity >= ci.Diagnostic.Error for d in tu.diagnostics)
-    return {"label": label, "functions": functions, "calls": calls, "files": files, "errors": errors, "failed": 0}
+    return {"label": label, "functions": functions, "calls": calls, "files": files, "errors": errors,
+            "failed": 0, "bodies": bodies, "addressed": sorted(addressed)}
 
 
 def _calls(function, relative):

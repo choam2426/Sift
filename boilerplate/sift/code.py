@@ -5,7 +5,7 @@ does not know the preprocessor, so here it only proposes where definitions proba
 code the compiler never saw is reported from these estimates, never evaluated from them.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import tree_sitter as ts
@@ -58,6 +58,14 @@ class Call:
     configs: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class Body:
+    """One configuration-specific lowering of a function for sift.dataflow."""
+    function: str             # Function.id
+    configs: tuple[str, ...]  # configurations whose lowering is identical
+    ir: dict = field(repr=False, compare=False)  # plain data from sift.dataflow.lower
+
+
 @dataclass
 class Scan:
     functions: list[Function]
@@ -67,6 +75,8 @@ class Scan:
     error_diagnostics: int
     failed_parses: int  # configurations libclang refused; the files may still parse in others
     calls: list[Call]
+    bodies: list[Body] = field(default_factory=list)  # filled when scanned with dataflow=True
+    addressed: tuple[str, ...] = ()  # USRs of functions whose address global initializers take
 
 
 @dataclass(frozen=True)
