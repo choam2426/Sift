@@ -1,22 +1,7 @@
 # Sift
 
-Sift는 **Jev 같은 SystemOne 모델을 사용해 취약점을 더 빠르고 효율적으로 찾아낼 수 있는지** 연구하는 프로젝트다. 2026-10-01에 연구 목적을 다시 확인했으며, 구체적인 성공 기준과 분석 구조는 이 목적에 맞춰 재검토한다([ADR 0019](docs/adr/0019-systemone-vulnerability-research-goal.md)).
+2026-10-16 기준. Sift의 목표는 **Jev(SystemOne)와 강한 코딩 에이전트의 협업으로 실제 취약점 발견의 시간·비용 대비 성과를 높일 수 있는지** 연구하고, 그 방법을 구현하는 **도구**와 효과를 검증하는 **논문**을 만드는 것이다. 도구의 구체적인 형태와 Jev의 역할은 아직 정하지 않았다.
 
-최종적으로는 **연구 결과를 바탕으로 사용자가 분석 대상에 맞는 Sift를 구축할 수 있는 가이드**를 제공한다. 가이드에는 효과가 확인된 조건과 한계를 반영한다.
+첫 연구는 C/C++ 메모리 안전성의 white-box 조사다. Jev 협업을 강한 에이전트 단독 및 동종 강한 에이전트 복수 실행과 동일한 금전·시간 상한에서 비교한다. 공개 사례는 통제 평가에, 신규 발견 주장은 사전에 방법을 고정한 전향적 오픈소스 평가에 사용한다. 완료한 발견에는 보고서와 취약판·수정판 PoC의 독립 교차 검증이 필요하다.
 
-지금까지 시험한 접근은 Jev로 함수와 관련 코드 묶음의 우선순위를 정하고, 연구원의 에이전트가 심층 조사하는 방식이다. 저장소에는 이 접근의 **설계, 스펙, 참조 구현과 실험 근거**가 있다.
-
-**[설계](DESIGN.md)부터 읽는다.** 구축 절차는 [설치 가이드](INSTALL.md)에 있다.
-
-| 제공물 | 위치 |
-|---|---|
-| 설계 | [`DESIGN.md`](DESIGN.md) |
-| 스펙 | [`spec/`](spec/) |
-| 보일러플레이트 (참조 구현) | [`boilerplate/`](boilerplate/) |
-| 벤치 | [`bench/`](bench/) |
-| 질문 라이브러리 | [`questions/`](questions/) |
-| 운영 스킬 | [`skill/`](skill/) |
-| 설치 가이드 | [`INSTALL.md`](INSTALL.md) |
-| 결과 환류 | [`reports/`](reports/) |
-| 실험 | [`experiments/`](experiments/README.md) |
-| 결정 기록 | [`docs/adr/`](docs/adr/) |
+[활성 설계](DESIGN.md) · [연구 결정](docs/adr/0029-reset-research-around-jev-and-validated-discovery.md)

@@ -1,5 +1,7 @@
 # 2차는 싱크 역방향 슬라이스로 가고, 데이터플로우 라이브러리를 libclang 위에 직접 구현한다
 
+> 2026-10-12 [ADR 0028](0028-stop-sink-slice-second-pass.md)로 이 방향을 중단했다. 구현과 실험 근거는 보존하지만 활성 연구 방향으로 쓰지 않는다.
+
 2026-10-08 결정. 기존 묶음 방식(A·B·D·E)과 [ADR 0026](0026-prioritize-callsite-candidates-and-adaptive-expansion.md)의 호출지점 경계(P·R·C)를 배제하고 2차 구조를 다시 생각한 다섯 후보([제안 문서](../../experiments/second-pass/stage2-structure-proposals.md)) 중 **싱크 기준 역방향 슬라이스**를 첫 구현 대상으로 고른다. 이를 위한 데이터플로우 라이브러리는 `sift` 패키지 안에 **libclang AST 위에 CFG까지 직접 구현**한다. 사용자는 얕은 근사 슬라이서를 명시적으로 거부했고, 제대로 된 분석기를 요구했다.
 
 ## 왜 싱크 슬라이스인가
