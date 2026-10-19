@@ -76,6 +76,21 @@ Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 �
 
 이 한 번의 실행은 “generic 질문으로도 Jev가 유용한 ranking을 준다”는 가설을 지지하지 않는다. 다음 반복에서는 질문을 더 구체화하거나, top-K를 넓히거나, Jev를 후보 필터가 아닌 보조 신호로만 쓰는 방식을 비교해야 한다.
 
+## Vikunja 반복 (r1 + r2)
+
+같은 사례·같은 generic 질문·top-10으로 3-arm을 한 번 더 실행했다. r2 순서는 seed 20261020으로 vanilla → jev → route-index였다. 여섯 실행 모두 `reproduced`다.
+
+| arm | r1 | r2 | 평균 비용 | 평균 턴 | 평균 시간 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| vanilla | $5.363 | $3.735 | **$4.549** | 51.0 | 506.8초 |
+| route-index | $2.984 | $2.655 | **$2.820** | 43.5 | 289.5초 |
+| jev | $3.019 | $2.535 | **$2.777** | 39.0 | 355.6초 |
+
+- route-index는 vanilla 대비 평균 비용 38%, 시간 43%를 줄였다.
+- jev는 route-index보다 평균 $0.042(1.5%) 싸고 턴이 4.5 적지만, 시간은 66초 길다. 2회 반복으로는 우연과 구분할 수 없다.
+- generic 질문에서 대상 route는 두 번 모두 32/355(9.0%)였고 top-10에 없었다. r1 agent는 top-10을 읽은 뒤 소스 grep으로 대상을 찾았다.
+- 현재까지 가장 강한 결론은 **구조화된 route extraction이 주된 driver**라는 것이다. Jev ranking의 증분 효과는 아직 관측되지 않았다.
+
 ## 다음
 
 1. `experiments/logic-ranker/e2e`를 `vanilla`/`route-index`/`jev` 3-arm과 case config로 일반화한다.
@@ -83,7 +98,7 @@ Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 �
 3. evaluator hardening과 contamination 통제를 구현한다.
 4. 작은 3-arm 파일럿을 Vikunja 또는 Pocket ID에서 실행한다.
 5. pilot 분산으로 confirmatory case 수와 run 수를 정하고, blind held-out 사례를 고른다.
-6. Vikunja 결과를 반복해 `route-index` vs `jev` 차이가 우연인지 확인한다. Pocket ID에서도 같은 3-arm을 실행한다.
+6. Pocket ID에서 같은 3-arm을 실행하고, Vikunja는 필요하면 반복을 더 늘린다.
 
 ## 한계
 
