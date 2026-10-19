@@ -88,7 +88,7 @@ Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 �
 
 - route-index는 vanilla 대비 평균 비용 38%, 시간 43%를 줄였다.
 - jev는 route-index보다 평균 $0.042(1.5%) 싸고 턴이 4.5 적지만, 시간은 66초 길다. 2회 반복으로는 우연과 구분할 수 없다.
-- generic 질문에서 대상 route는 두 번 모두 32/355(9.0%)였고 top-10에 없었다. r1 agent는 top-10을 읽은 뒤 소스 grep으로 대상을 찾았다.
+- generic 질문에서 대상 route는 r1 32/355(9.0%), r2 19/355(5.4%)였고 두 번 모두 top-10 밖이었다. r1 agent는 top-10을 읽은 뒤 소스 grep으로 대상을 찾았다.
 - 현재까지 가장 강한 결론은 **구조화된 route extraction이 주된 driver**라는 것이다. Jev ranking의 증분 효과는 아직 관측되지 않았다.
 
 ## 다음

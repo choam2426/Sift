@@ -81,7 +81,7 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 
 - route index가 vanilla 대비 비용 44%, 턴 41%를 줄였다.
 - Jev는 route-index를 이기지 못했다. Jev 355요청·8,114,410토큰을 썼고, 총비용은 $0.035 더 높았다.
-- 고정 generic 질문에서 대상 route는 **32/355 (9.0%)**였고 top10에 없었다. 에이전트는 top10을 읽은 뒤 `pkg/routes`에서 bucket/task route를 직접 grep해 찾았다. 이 실행에서 Jev ranking은 탐색을 대상으로 유도하지 못했다.
+- 고정 generic 질문에서 대상 route는 r1 **32/355(9.0%)**, r2 **19/355(5.4%)**였고 둘 다 top10 밖이었다. r1 에이전트는 top10을 읽은 뒤 `pkg/routes`에서 bucket/task route를 직접 grep해 찾았다. Jev ranking은 탐색을 대상으로 유도하지 못했다.
 - arm당 1회의 파일럿이다. 원자료: `~/sift-runs/measurements/logic-e2e-vikunja/`.
 
 ## 다음
