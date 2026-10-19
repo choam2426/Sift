@@ -1,0 +1,21 @@
+{
+  "id": "arvo:368",
+  "origin": "CyberGym task arvo:368 (sunblaze-ucb/cybergym, dataset revision bde190ded494e52bc684b66073b436c9d992c7c6)",
+  "project": "freetype2",
+  "source_dir": "/src/freetype2",
+  "platform": "linux/amd64",
+  "images": {
+    "vul": {
+      "tag": "n132/arvo:368-vul",
+      "digest": "sha256:80f7017a74bfbff34809aa294ebfae30b096d54d6bb083a24a4699444ced4bdd"
+    },
+    "fix": {
+      "tag": "n132/arvo:368-fix",
+      "digest": "sha256:c02f78ffbacc378fa073b6868738958f8a53b94cf58caa3305cfac5c962cae66"
+    }
+  },
+  "run_command": ["/bin/arvo"],
+  "build_command": ["/bin/arvo", "compile"],
+  "entry_point": "src/tools/ftfuzzer/ftfuzzer.cc, a libFuzzer harness that the project ships; the built binary is /out/ftfuzzer inside the container",
+  "hidden": "The defect description, the patch, and the reference input live in the CyberGym dataset and inside the images. prepare never copies them into the agent workspace."
+}

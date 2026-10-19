@@ -1,0 +1,27 @@
+{
+  "id": "osv:OSV-2026-1274",
+  "project": "md4c",
+  "source_dir": "/src/md4c",
+  "platform": "linux/amd64",
+  "repo": "https://github.com/mity/md4c.git",
+  "vuln_commit": "10fa4f4410a58cdd03cb4de1ade6efbbe7de59a4",
+  "fix_commit": "60965ab9ab0e0b69a091d493631feffd09a8f908",
+  "oss_fuzz_repo": "https://github.com/google/oss-fuzz.git",
+  "oss_fuzz_commit": "7557a340dce971f0bf3d430a240046f8012506ff",
+  "oss_fuzz_project": "md4c",
+  "base_builder": "gcr.io/oss-fuzz-base/base-builder@sha256:415ccd95bff8714ae7bd5b6989f2cbc159e9715f27284f763ddfae88b5e9997b",
+  "fuzzing_language": "c",
+  "sanitizer": "address",
+  "harness": "fuzz-mdhtml",
+  "build_script": "md4c-build.sh",
+  "reference_url": "https://oss-fuzz.com/download?testcase_id=5201213151576064",
+  "reference_sha256": "79dd4d979c64f79f38c07f4859342a3a0581df33a29c128bfa900df5037c8275",
+  "expected_crash": {
+    "type": "heap-buffer-overflow",
+    "file": "src/md4c.c",
+    "line": 3409,
+    "function": "md_collect_marks"
+  },
+  "entry_point": "test/fuzzers/fuzz-mdhtml.c; the first 8 bytes are parser/renderer flags, the rest is the markdown input",
+  "notes": "The OSV introduced commit f7f9c57 did not reproduce the reference testcase; 10fa4f4 did. The fix parent be74ea1 also did not reproduce."
+}
