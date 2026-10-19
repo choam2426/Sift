@@ -1,7 +1,7 @@
 # ADR 0005: 학습 기준일 이후 사례의 이미지는 고정 소스로 직접 빌드한다
 
 - 날짜: 2026-10-16
-- 상태: 채택
+- 상태: C/C++ testbed 방법으로 보존. 활성 실험은 [ADR 0006](0006-logic-bug-ranker-experiment.md)을 따른다.
 - 관련: [ADR 0001](0001-jev-collaboration-research-charter.md), [ADR 0002](0002-cybergym-images-as-shared-testbed.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md)
 
 ## 맥락

@@ -370,13 +370,13 @@ def claude_command(task: str, settings: Path, model: str, effort: str, max_budge
 
 
 RESULT_FIELDS = ("subtype", "is_error", "total_cost_usd", "duration_ms", "duration_api_ms", "num_turns", "usage",
-                 "modelUsage", "session_id", "permission_denials", "stop_reason", "terminal_reason")
+                 "modelUsage", "session_id", "permission_denials", "stop_reason", "terminal_reason", "result_index")
 
 
 def parse_stream(lines) -> dict:
     """Summary of a Claude Code stream-json transcript: final result, models seen, tool calls in order.
     Malformed lines are counted, not trusted."""
-    summary: dict = {"init": None, "hooks_fired": 0, "result": None, "models": [], "tool_calls": [],
+    summary: dict = {"init": None, "hooks_fired": 0, "result": None, "results": [], "models": [], "tool_calls": [],
                      "malformed_lines": 0, "tokens_by_model": {}}
     models = set()
     for line in lines:
@@ -414,7 +414,12 @@ def parse_stream(lines) -> dict:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
                     summary["tool_calls"].append({"name": str(block.get("name")), "input": block.get("input") or {}})
         elif event.get("type") == "result":
-            summary["result"] = {k: event.get(k) for k in RESULT_FIELDS}
+            result = {k: event.get(k) for k in RESULT_FIELDS}
+            summary["results"].append(result)
+            if summary["result"] is None and result.get("result_index") in (0, None):
+                summary["result"] = result
+    if summary["result"] is None and summary["results"]:
+        summary["result"] = summary["results"][0]
     summary["models"] = sorted(models)
     return summary
 
@@ -830,7 +835,11 @@ def cmd_run(workspace: Path, model: str, effort: str, max_budget_usd: float, max
     stream = parse_stream((run_dir / "stream.jsonl").read_text(encoding="utf-8", errors="replace").splitlines())
     record["init"] = stream["init"]  # what the session actually loaded: version, tools, skills, MCP, plugins
     record["hooks_fired"] = stream["hooks_fired"]
-    record["result"] = stream["result"]
+    record["result"] = stream["result"]  # main session result, not a subagent result
+    record["results"] = stream["results"]
+    costs = [r.get("total_cost_usd") for r in stream["results"]
+             if isinstance(r.get("total_cost_usd"), (int, float))]
+    record["total_cost_usd"] = max(costs) if costs else None  # includes subagent spend
     record["models_seen"] = stream["models"]
     record["tokens_by_model"] = stream["tokens_by_model"]  # summed from assistant messages; survives an interrupted session
     record["tool_calls"] = len(stream["tool_calls"])
@@ -855,7 +864,7 @@ def cmd_run(workspace: Path, model: str, effort: str, max_budget_usd: float, max
     (run_dir / "run.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
     result = record["result"] or {}
-    print(f"done exit={proc.returncode} elapsed={record['elapsed_seconds']}s cost=${result.get('total_cost_usd')} turns={result.get('num_turns')} "
+    print(f"done exit={proc.returncode} elapsed={record['elapsed_seconds']}s cost=${record.get('total_cost_usd')} turns={result.get('num_turns')} "
           f"subtype={result.get('subtype')} models={','.join(record['models_seen']) or '?'} "
           f"hooks={record['hooks_fired']} skills={init.get('skills')} mcp={init.get('mcp_servers')}")
     print(f"     tb={record['tb']} audit={record['audit']['status']} ({len(audit)} flags) findings={len(record['evaluations'])}")

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "kite",
+    "repo": "https://github.com/kite-org/kite",
+    "vuln_commit": "d74c979deddb612e9b7d1066ccf7acee35b281f2",
+    "fix_commit": "08116eed557f8d6982cc83af0b02991e0f3577d5",
+    "fix_version": "v0.14.1",
+    "go": "1.26",
+    "test": "go test ./pkg/kube -run TestBuildProxyURL",
+    "target_route": "route:GET /namespaces/:namespace/:kind/:name/proxy/*path",
+    "question": "Does this code enforce the authorized namespace and resource boundary before building the Kubernetes proxy URL?",
+    "target_entry": "pkg/proxy.ProxyHandler.HandleProxy"
+  },
+  {
+    "id": "pocketid",
+    "repo": "https://github.com/pocket-id/pocket-id",
+    "vuln_commit": "59fe481af9284406e0c45385be729a293e90ffaa",
+    "fix_commit": "978ac87deffec58beaccd15aead975e91b94c8a5",
+    "fix_version": "v2.6.0",
+    "go": "1.26",
+    "test": "go test ./internal/service -run TestOidcServiceRefreshTokenAuthorizationState",
+    "target_route": "route:POST /oidc/token",
+    "question": "Does this refresh-token path re-check the current authorization, disabled state, and group restrictions before issuing new tokens?",
+    "target_entry": "internal/controller.OidcController.createTokensHandler"
+  },
+  {
+    "id": "vikunja",
+    "repo": "https://github.com/go-vikunja/vikunja",
+    "vuln_commit": "37c35c64fb9b58b79475bc1fe971a46921c7ab24",
+    "fix_commit": "36cdc2ce2be0b8ccc74227d178b92047d59cd65f",
+    "fix_version": "v2.4.0",
+    "go": "1.26",
+    "test": "go test ./pkg/webtests -run 'TestTaskBucketV2/task_from_a_foreign_project_is_forbidden'",
+    "target_route": "route:PUT /projects/{project}/views/{view}/buckets/{bucket}/tasks",
+    "question": "Does this task-bucket update authorize the task identified in the request body, not only the URL project, view, and bucket?",
+    "target_entry": "pkg/models.updateTaskBucket"
+  },
+  {
+    "id": "arcane",
+    "repo": "https://github.com/getarcaneapp/arcane",
+    "vuln_commit": "6006dbefd64e437e4935c80e38006b96d53c4b93",
+    "fix_commit": "4fe4c7ed9483dff7d43e3c4bee6a92037ce886b4",
+    "fix_version": "backend/v2.11.0",
+    "go": "1.27",
+    "test": "go test ./internal/auth -run TestAuthMiddleware",
+    "target_route": "route:GET /debug/pprof/",
+    "question": "Does this authentication middleware enforce the admin requirement for environment access tokens before allowing the route handler?",
+    "target_entry": "internal/auth.AuthMiddleware.Add"
+  }
+]

@@ -174,13 +174,17 @@ class RunRecordTests(unittest.TestCase):
             json.dumps({"type": "assistant", "message": {"model": "claude-mythos-5-1", "usage": {"input_tokens": 2, "output_tokens": 5, "cache_read_input_tokens": "bad"}, "content": []}}),
             "not json",
             json.dumps({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 1.5, "num_turns": 7,
-                        "modelUsage": {"claude-mythos-5-1": {"costUSD": 1.5}}, "extra": "ignored"}),
+                        "result_index": 0, "modelUsage": {"claude-mythos-5-1": {"costUSD": 1.5}}, "extra": "ignored"}),
+            json.dumps({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 1.6, "num_turns": 2,
+                        "result_index": 1, "modelUsage": {"claude-mythos-5-1": {"costUSD": 1.5},
+                                                          "claude-haiku-5-5": {"costUSD": 0.1}}}),
         ]
         s = testbed.parse_stream(lines)
         self.assertEqual(s["models"], ["claude-mythos-5-1"])
         self.assertEqual(s["tool_calls"], [{"name": "Bash", "input": {"command": "./tb build"}}])
         self.assertEqual(s["result"]["total_cost_usd"], 1.5)
         self.assertEqual(s["result"]["num_turns"], 7)
+        self.assertEqual(len(s["results"]), 2)
         self.assertNotIn("extra", s["result"])
         self.assertEqual(s["malformed_lines"], 1)
         self.assertEqual(s["tokens_by_model"], {"claude-mythos-5-1": {"input_tokens": 5, "output_tokens": 15, "cache_read_input_tokens": 100}})

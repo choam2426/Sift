@@ -1,7 +1,7 @@
 # ADR 0004: 측정 사례는 모델 학습 기준일 이후에 공개된 취약점에서 고른다
 
 - 날짜: 2026-10-16
-- 상태: 채택. 2026-10-19에 측정 사례 3건을 선정·검증했다. 이미지 제작과 판정은 [ADR 0005](0005-pinned-source-build-for-post-cutoff-cases.md)를 따른다.
+- 상태: C/C++ testbed 사례로 보존. 활성 실험은 [ADR 0006](0006-logic-bug-ranker-experiment.md)을 따른다. 2026-10-19에 측정 사례 3건을 선정·검증했고, 이미지 제작과 판정은 [ADR 0005](0005-pinned-source-build-for-post-cutoff-cases.md)를 따른다.
 - 관련: [ADR 0001](0001-jev-collaboration-research-charter.md), [ADR 0002](0002-cybergym-images-as-shared-testbed.md), [ADR 0003](0003-cost-as-matched-budget-and-first-run-measures-consumption.md), [ADR 0005](0005-pinned-source-build-for-post-cutoff-cases.md)
 
 ## 맥락
