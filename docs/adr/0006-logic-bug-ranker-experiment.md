@@ -52,12 +52,27 @@ archive를 확인한 결과 Jev는 검증자가 아니라 **후보 ranker**다. 
 
 이 결과는 **가능성**을 보여주지만 end-to-end 효율을 증명하지 않는다. 질문은 사례별 불변식으로 고정한 ceiling test였고, 프로젝트당 알려진 버그는 하나다.
 
+## Kite e2e 파일럿 (2026-10-19)
+
+Kite 한 사례로 순정과 Jev ranker를 각 1회 실행했다. 두 arm 모두 `buildProxyURL` 경로 탐색 결함을 찾고 테스트를 제출해 `reproduced` 판정을 받았다.
+
+| 항목 | 순정 | Jev ranker |
+| --- | ---: | ---: |
+| Claude 비용 | $1.436 | $1.348 |
+| Jev 비용 | — | $0.0245 (130요청, 582,973토큰) |
+| 총비용 | **$1.436** | **$1.373** |
+| 턴 | 16 | 18 |
+| 소요 시간 | 171초 | 224초 |
+| 감사 | 경계 이탈 없음 (workspace 내부 상대 경로 2건) | 경계 이탈 없음 (동일) |
+
+Jev arm은 라우트 130개를 한 번 채점해 대상 `/namespaces/.../proxy/*path`를 top 1로 올렸다. 총비용 차이는 $0.063(4.4%)으로 작았다. Kite는 국소적이고 명시적인 가드라 순정도 빠르게 찾는 ceiling case이므로, 이 결과를 Jev의 일반 효과로 해석하지 않는다.
+
 ## 다음
 
-1. Route-aware unit 추출기와 평가 스크립트를 `experiments/logic-ranker/`에 둔다.
-2. Jev arm용 CLI·가이드를 만들고 순정 arm과 동일한 조사·검증 가이드를 제공한다.
-3. Kite·Pocket ID·Vikunja로 end-to-end 파일럿을 하고, Arcane은 대조군으로 둔다.
-4. 결과를 보고 반복·사례 확장을 정한다.
+1. Pocket ID(refresh state machine)와 Vikunja(cross-tenant IDOR)로 end-to-end를 확장한다. Kite는 ceiling/control로 둔다.
+2. Jev arm의 `routes.jsonl` 생성을 `extract_routes`로 자동화하고, 질문 템플릿을 사전 고정한다.
+3. 반복 횟수와 사례 수를 파일럿 비용·변동성을 보고 정한다.
+4. 감사에서 workspace 내부 상대 경로와 실제 경계 이탈을 구분하도록 개선한다.
 
 ## 한계
 

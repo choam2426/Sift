@@ -60,10 +60,14 @@ python3 experiments/logic-ranker/summarize.py --kind routes --data-root ~/sift-r
 
 이 결과는 **ceiling test**다. 사례별 불변식 질문을 미리 넣었고, 프로젝트당 알려진 버그가 하나다. End-to-end 효율을 증명하지 않는다.
 
+## E2E
+
+Kite 파일럿 harness와 결과는 [`e2e/`](e2e/README.md)에 있다. 순정 $1.436, Jev ranker $1.373(Jev $0.0245 포함), 둘 다 reproduced. Kite는 ceiling case라 작은 차이만 났다.
+
 ## 다음
 
-1. Jev ranker CLI와 가이드 (Jev arm에만 제공, 조사·검증 가이드는 두 arm 동일)
-2. Kite·Pocket ID·Vikunja end-to-end 파일럿, Arcane은 대조군
-3. 순정 vs Jev: 검증된 발견당 비용, 첫 발견까지 비용, Jev 호출 비용, 실제 사용량
+1. Pocket ID·Vikunja end-to-end, Arcane은 대조군
+2. `routes.jsonl` 자동 생성과 질문 템플릿 사전 고정
+3. 감사에서 workspace 내부 상대 경로와 실제 경계 이탈 구분
 
 원자료와 stage 1 기록: `~/sift-runs/notes/2026-10-19-stage1-ranker.md`, `~/sift-runs/measurements/jev-ranker-stage1/`.

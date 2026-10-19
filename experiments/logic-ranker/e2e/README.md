@@ -1,0 +1,66 @@
+# Go logic-bug e2e harness
+
+2026-10-19 기준 Kite 파일럿. 순정 agent와 Jev ranker agent를 같은 소스·도구·금전 상한에서 비교한다.
+
+## 구성
+
+- `prepare`: 취약 리비전 소스를 workspace에 풀고 Go 컨테이너를 띄운다. `tb test/build/exec` 래퍼를 만든다.
+- `run`: Claude Code를 깨끗한 설정으로 실행하고 `findings/`를 평가한다.
+- `teardown`: 컨테이너와 Jev proxy를 정리한다.
+- `jev_proxy.py`: 호스트에서 API 키를 들고 Unix socket으로 Jev를 호출한다. key는 workspace 밖에 있고 agent는 읽지 못한다.
+- `jev_cli.py`: workspace의 `./jev`가 된다. `ask`, `rank`, `stats`만 제공한다. Jev는 후보 ranker이며 검증자가 아니다.
+
+## 준비
+
+```bash
+# 취약/수정 소스 (예: Kite)
+mkdir -p ~/sift-runs/logic-e2e/sources
+# source trees must not contain .git or the hidden test
+# module cache
+docker volume create sift-go-mod-cache
+docker run --rm -v <vuln-source>:/src -w /src -v sift-go-mod-cache:/go/pkg/mod \
+  -e GOPATH=/go golang:1.26 go mod download
+```
+
+## 실행
+
+```bash
+python3 experiments/logic-ranker/e2e/e2e.py prepare --arm vanilla --workspace ~/sift-runs/logic-e2e/kite-vanilla-r2
+python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-vanilla-r2 --max-budget-usd 30
+
+python3 experiments/logic-ranker/e2e/e2e.py prepare --arm jev --workspace ~/sift-runs/logic-e2e/kite-jev-r1
+python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-jev-r1 --max-budget-usd 30
+
+python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
+```
+
+Jev arm에는 `routes.jsonl`과 `JEV.md`가 추가된다. `./jev rank --units routes.jsonl --question "..." --top 20`으로 후보를 정렬한다. Jev 비용은 proxy 로그(`control/jev-calls.jsonl`)에 남고 총비용에 별도로 더해야 한다.
+
+## 평가
+
+에이전트는 `findings/<name>/test.go`를 제출한다. harness는 이 테스트를 **pristine 취약 소스**와 **pristine 수정 소스**의 `pkg/kube`에 복사하고 `go test ./pkg/kube`를 실행한다. 취약판 실패·수정판 통과면 `reproduced`다. 에이전트가 수정한 소스는 평가에 쓰지 않는다.
+
+## Kite 파일럿 결과
+
+| 항목 | 순정 | Jev ranker |
+| --- | ---: | ---: |
+| 판정 | reproduced | reproduced |
+| Claude 비용 | $1.436 | $1.348 |
+| Jev 비용 | — | $0.0245 (130요청, 582,973토큰) |
+| 총비용 | **$1.436** | **$1.373** |
+| 턴 | 16 | 18 |
+| 소요 시간 | 171초 | 224초 |
+| 도구 호출 | 15 | 17 |
+| 감사 | docker 0, network 0, subagent 0, parent-path 2 | docker 0, network 0, subagent 0, parent-path 2 |
+
+- 두 arm 모두 `buildProxyURL` 경로 탐색 결함을 찾고 테스트를 제출했다.
+- Jev arm은 130개 라우트를 한 번 채점해 `/namespaces/.../proxy/*path`를 top 1로 올렸고, 그 경로를 조사했다.
+- 총비용 차이는 **$0.063 (4.4%)**로 작았다. Kite는 국소적이고 명시적인 가드라 순정도 빠르게 찾은 ceiling case다.
+- `parent-path` 2건은 `../../TASK.md`와 `scratch/proxy.go.orig`처럼 workspace 안의 상대 경로였다. 실제 경계 이탈은 없었다.
+- 한 사례·한 번씩의 파일럿이므로 Jev의 일반 효과로 해석하지 않는다.
+
+원자료: `~/sift-runs/measurements/logic-e2e-kite/`.
+
+## 다음
+
+Pocket ID(refresh state machine)와 Vikunja(cross-tenant IDOR)로 확장한다. Kite는 ceiling/control로 둔다. Jev arm의 `routes.jsonl` 생성도 `extract_routes`로 자동화하고, 질문 템플릿은 사전 고정한다.
