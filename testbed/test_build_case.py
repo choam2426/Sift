@@ -22,6 +22,10 @@ RECIPE = {
 }
 
 
+DEPENDENCY = {"name": "zlib", "repo": "https://github.com/madler/zlib.git",
+              "commit": "f" * 40, "dest": "deps/zlib"}
+
+
 class RecipeTests(unittest.TestCase):
     def test_loads_and_validates(self):
         with tempfile.TemporaryDirectory() as d:
@@ -38,12 +42,40 @@ class RecipeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 build_case.load_recipe(path)
 
+    def test_loads_dependencies(self):
+        with tempfile.TemporaryDirectory() as d:
+            recipe = dict(RECIPE, dependencies=[DEPENDENCY])
+            path = Path(d) / "r.json"
+            path.write_text(json.dumps(recipe))
+            self.assertEqual(build_case.load_recipe(path)["dependencies"], [DEPENDENCY])
+
+    def test_rejects_dependency_name_with_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = dict(RECIPE, dependencies=[dict(DEPENDENCY, name="../zlib")])
+            path = Path(d) / "r.json"
+            path.write_text(json.dumps(bad))
+            with self.assertRaises(ValueError):
+                build_case.load_recipe(path)
+
+    def test_rejects_dependency_dest_outside_project(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = dict(RECIPE, dependencies=[dict(DEPENDENCY, dest="../zlib")])
+            path = Path(d) / "r.json"
+            path.write_text(json.dumps(bad))
+            with self.assertRaises(ValueError):
+                build_case.load_recipe(path)
+
     def test_content_key_is_stable_and_script_sensitive(self):
         key1 = build_case.content_key(RECIPE, "#!/bin/bash\necho a\n")
         key2 = build_case.content_key(RECIPE, "#!/bin/bash\necho a\n")
         key3 = build_case.content_key(RECIPE, "#!/bin/bash\necho b\n")
         self.assertEqual(key1, key2)
         self.assertNotEqual(key1, key3)
+
+    def test_content_key_includes_dependencies(self):
+        with_dep = dict(RECIPE, dependencies=[DEPENDENCY])
+        self.assertNotEqual(build_case.content_key(RECIPE, "x"),
+                            build_case.content_key(with_dep, "x"))
 
     def test_dockerfile_pins_base_and_env(self):
         text = build_case.dockerfile(RECIPE)
@@ -52,6 +84,17 @@ class RecipeTests(unittest.TestCase):
         self.assertIn("SANITIZER=address", text)
         self.assertIn("COPY src /src/md4c", text)
         self.assertIn("RUN compile", text)
+
+    def test_copy_source_tree_preserves_dangling_symlinks(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "source"
+            source.mkdir()
+            (source / "real.txt").write_text("data")
+            (source / "missing-link").symlink_to("../missing")
+            dest = Path(d) / "dest"
+            build_case.copy_source_tree(source, dest)
+            self.assertTrue((dest / "missing-link").is_symlink())
+            self.assertEqual((dest / "real.txt").read_text(), "data")
 
 
 class CrashSignatureTests(unittest.TestCase):

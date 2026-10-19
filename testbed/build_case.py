@@ -6,7 +6,9 @@
 
 A recipe pins the project repository, vulnerable and fixed commits, the
 OSS-Fuzz project revision, the base-builder image digest, the harness, and the
-public reference testcase. The build command produces a bundle:
+public reference testcase. Optional `dependencies` pin extra source trees by
+repository, commit, and destination inside the project. The build command
+produces a bundle:
 
     case.json      local image refs, expected crash, reference hash
     fix.tar        fixed image, removed from Docker after the build
@@ -29,7 +31,7 @@ import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 HERE = Path(__file__).resolve().parent
 CMD_TIMEOUT_S = 10
@@ -66,6 +68,28 @@ def image_id(ref: str) -> str | None:
     return proc.stdout.decode().strip() or None if proc.returncode == 0 else None
 
 
+def validate_dependencies(recipe: dict) -> list[dict]:
+    deps = recipe.get("dependencies", [])
+    if not isinstance(deps, list):
+        raise ValueError("dependencies must be a list")
+    seen = set()
+    for dep in deps:
+        if not isinstance(dep, dict):
+            raise ValueError("each dependency must be an object")
+        for key in ("name", "repo", "commit", "dest"):
+            if key not in dep or not isinstance(dep[key], str) or not dep[key]:
+                raise ValueError(f"dependency is missing a non-empty {key}")
+        if dep["name"] in seen:
+            raise ValueError(f"duplicate dependency name: {dep['name']}")
+        if "/" in dep["name"] or "\\" in dep["name"] or dep["name"] in (".", ".."):
+            raise ValueError(f"dependency name must be a simple name: {dep['name']}")
+        seen.add(dep["name"])
+        dest = PurePosixPath(dep["dest"])
+        if dest.is_absolute() or not dest.parts or ".." in dest.parts:
+            raise ValueError(f"dependency dest must stay inside the project: {dep['dest']}")
+    return deps
+
+
 def load_recipe(path: Path) -> dict:
     recipe = json.loads(path.read_text(encoding="utf-8"))
     required = ("id", "project", "source_dir", "platform", "repo", "vuln_commit", "fix_commit",
@@ -81,6 +105,7 @@ def load_recipe(path: Path) -> dict:
     for key in ("type", "file", "line", "function"):
         if key not in expected:
             raise ValueError(f"expected_crash is missing {key}")
+    validate_dependencies(recipe)
     return recipe
 
 
@@ -88,8 +113,23 @@ def content_key(recipe: dict, build_script: str) -> str:
     pinned = {k: recipe[k] for k in ("repo", "vuln_commit", "fix_commit", "oss_fuzz_repo", "oss_fuzz_commit",
                                      "oss_fuzz_project", "base_builder", "fuzzing_language", "sanitizer",
                                      "harness", "source_dir", "platform")}
+    pinned["dependencies"] = recipe.get("dependencies", [])
     pinned["build_script_sha256"] = sha256_text(build_script)
     return sha256_text(json.dumps(pinned, sort_keys=True))[:12]
+
+
+def fetch_dependency(dep: dict, dest: Path, work: Path) -> None:
+    """Archive a pinned dependency commit without .git."""
+    clone = work / "dep-repos" / dep["name"]
+    if not (clone / ".git").exists():
+        run(["git", "clone", "-q", "--filter=blob:none", "--no-checkout", dep["repo"], str(clone)],
+            timeout=1800)
+    commit = dep["commit"]
+    if run(["git", "-C", str(clone), "cat-file", "-e", f"{commit}^{{commit}}"], check=False).returncode != 0:
+        run(["git", "-C", str(clone), "fetch", "-q", "origin", commit], timeout=1800)
+    dest.mkdir(parents=True, exist_ok=False)
+    archive = run(["git", "-C", str(clone), "archive", commit], timeout=600)
+    run(["tar", "-x", "-C", str(dest)], input_bytes=archive.stdout, timeout=600)
 
 
 def fetch_source(repo: str, commit: str, dest: Path, work: Path) -> None:
@@ -135,10 +175,30 @@ def dockerfile(recipe: dict) -> str:
     ])
 
 
-def build_one(recipe: dict, source: Path, build_script: Path, tag: str, mode: str, log_path: Path) -> str:
+def copy_source_tree(source: Path, dest: Path) -> None:
+    """Copy a source archive without following symlinks.
+
+    Some archives contain links into directories (often submodule paths) that
+    are not part of the archive. Following them would fail before the build
+    starts; preserving them is harmless because the build does not use those
+    paths.
+    """
+    shutil.copytree(source, dest, symlinks=True)
+
+
+def build_one(recipe: dict, source: Path, build_script: Path, tag: str, mode: str, log_path: Path,
+              dependencies: list[tuple[str, Path]] | None = None) -> str:
     context = log_path.parent / f"context-{mode}"
     context.mkdir(parents=True, exist_ok=False)
-    shutil.copytree(source, context / "src")
+    copy_source_tree(source, context / "src")
+    for dest, dep_source in dependencies or []:
+        target = context / "src" / Path(*PurePosixPath(dest).parts)
+        if target.is_dir():
+            shutil.rmtree(target)
+        elif target.exists():
+            target.unlink()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        copy_source_tree(dep_source, target)
     shutil.copy(build_script, context / "build.sh")
     (context / "Dockerfile").write_text(dockerfile(recipe), encoding="utf-8")
     proc = docker("build", "--platform", recipe["platform"], "--network", "none", "--pull=false",
@@ -221,6 +281,14 @@ def cmd_build(args: argparse.Namespace) -> int:
     work = Path(args.work).resolve() if args.work else bundle / "work"
     work.mkdir(parents=True, exist_ok=True)
 
+    dependencies = []
+    for dep in recipe.get("dependencies", []):
+        dep_dir = work / "deps" / dep["name"]
+        if not dep_dir.exists():
+            fetch_dependency(dep, dep_dir, work)
+        dependencies.append((dep["dest"], dep_dir))
+        print(f"ok   dependency {dep['name']} {dep['commit'][:10]}")
+
     build_script = (recipe_path.parent / recipe["build_script"]).resolve()
     if not build_script.is_file():
         print(f"FAIL build script missing: {build_script}")
@@ -238,6 +306,7 @@ def cmd_build(args: argparse.Namespace) -> int:
                                                "oss_fuzz_commit", "oss_fuzz_project", "base_builder",
                                                "fuzzing_language", "sanitizer", "harness", "platform")},
               "build_script_sha256": sha256_text(script_text), "oss_fuzz_recipe_sha256": oss_fuzz_recipe(recipe, work)}
+    record["pins"]["dependencies"] = recipe.get("dependencies", [])
 
     print(f"recipe {recipe['id']} key={key}")
     for mode, commit in (("vuln", recipe["vuln_commit"]), ("fix", recipe["fix_commit"])):
@@ -250,10 +319,10 @@ def cmd_build(args: argparse.Namespace) -> int:
     record["images"] = {}
     record["images"]["vuln"] = {"tag": vuln_tag,
                                 "id": build_one(recipe, work / "src-vuln", build_script, vuln_tag, "vuln",
-                                                logs / "vuln-build.log")}
+                                                logs / "vuln-build.log", dependencies)}
     record["images"]["fix"] = {"tag": fix_tag,
                                "id": build_one(recipe, work / "src-fix", build_script, fix_tag, "fix",
-                                               logs / "fix-build.log")}
+                                               logs / "fix-build.log", dependencies)}
     record["build_seconds"] = round(time.monotonic() - started, 1)
     print(f"ok   built vuln and fix images in {record['build_seconds']}s")
     record["toolchain"] = toolchain_info(recipe, vuln_tag)

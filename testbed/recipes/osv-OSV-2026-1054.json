@@ -1,0 +1,27 @@
+{
+  "id": "osv:OSV-2026-1054",
+  "project": "libhevc",
+  "source_dir": "/src/libhevc",
+  "platform": "linux/amd64",
+  "repo": "https://github.com/ittiam-systems/libhevc.git",
+  "vuln_commit": "646ee9988888336da6f762788c97a87b74b7578d",
+  "fix_commit": "5b574436c3cb4796c41164a33659e981616c74d3",
+  "oss_fuzz_repo": "https://github.com/google/oss-fuzz.git",
+  "oss_fuzz_commit": "ae6a7256681cd604eae5ea5bcbedca9213578ecd",
+  "oss_fuzz_project": "libhevc",
+  "base_builder": "gcr.io/oss-fuzz-base/base-builder@sha256:415ccd95bff8714ae7bd5b6989f2cbc159e9715f27284f763ddfae88b5e9997b",
+  "fuzzing_language": "c",
+  "sanitizer": "address",
+  "harness": "hevc_dec_fuzzer",
+  "build_script": "libhevc-build.sh",
+  "reference_url": "https://oss-fuzz.com/download?testcase_id=4634909378150400",
+  "reference_sha256": "edece07033dcdf28b0b3ed1cd175732718d53d05c384089b93ee8efd14214484",
+  "expected_crash": {
+    "type": "heap-buffer-overflow",
+    "file": "decoder/ihevcd_cabac.c",
+    "line": 585,
+    "function": "ihevcd_cabac_decode_bins_tunary"
+  },
+  "entry_point": "fuzzer/hevc_dec_fuzzer.cpp; HEVC decoder bitstream",
+  "notes": "The build disables ENABLE_TESTS because googletest is fetched from the network, which the build container blocks. The reference testcase is a 68-byte HEVC bitstream."
+}

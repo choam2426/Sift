@@ -1,0 +1,27 @@
+{
+  "id": "osv:OSV-2026-1083",
+  "project": "libiec61850",
+  "source_dir": "/src/libiec61850",
+  "platform": "linux/amd64",
+  "repo": "https://github.com/mz-automation/libiec61850.git",
+  "vuln_commit": "6e7a603c771d6124cd3cafea7ec38b7e0f2e7aaf",
+  "fix_commit": "fefa70820a3fd14c409d6d12c1352b10c73677c0",
+  "oss_fuzz_repo": "https://github.com/google/oss-fuzz.git",
+  "oss_fuzz_commit": "a53197d869f24b515e97f9ae5a5b897abdd65dab",
+  "oss_fuzz_project": "libiec61850",
+  "base_builder": "gcr.io/oss-fuzz-base/base-builder@sha256:415ccd95bff8714ae7bd5b6989f2cbc159e9715f27284f763ddfae88b5e9997b",
+  "fuzzing_language": "c",
+  "sanitizer": "address",
+  "harness": "fuzz_goose_subscriber",
+  "build_script": "libiec61850-build.sh",
+  "reference_url": "https://oss-fuzz.com/download?testcase_id=6094987193024512",
+  "reference_sha256": "e91382177e7a976422154e25b44d2f6646be271ef51647e8738ce2d8aa42d7b4",
+  "expected_crash": {
+    "type": "heap-buffer-overflow",
+    "file": "src/goose/goose_receiver.c",
+    "line": 839,
+    "function": "parseGoosePayload"
+  },
+  "entry_point": "fuzz/fuzz_goose_subscriber.c; raw GOOSE frame",
+  "notes": "OSV lists d75cdd0 as fixed, but that commit is the BER-encoder change after the actual fix. fefa708 ('GOOSE subscriber: fixed potential OOB read in parseGoosePayload (regression)') is the first clean revision; 6e7a603 introduced the regression."
+}

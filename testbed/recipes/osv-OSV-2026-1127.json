@@ -1,0 +1,35 @@
+{
+  "id": "osv:OSV-2026-1127",
+  "project": "libzip",
+  "source_dir": "/src/libzip",
+  "platform": "linux/amd64",
+  "repo": "https://github.com/nih-at/libzip.git",
+  "vuln_commit": "b5064c161d4677a6147a08551a1f02b00eb813b3",
+  "fix_commit": "31eefd70f27d33a442466914f5919c84784eafd8",
+  "oss_fuzz_repo": "https://github.com/google/oss-fuzz.git",
+  "oss_fuzz_commit": "284f6239d40a40e18b4468d83a191559134315c6",
+  "oss_fuzz_project": "libzip",
+  "base_builder": "gcr.io/oss-fuzz-base/base-builder@sha256:415ccd95bff8714ae7bd5b6989f2cbc159e9715f27284f763ddfae88b5e9997b",
+  "fuzzing_language": "c",
+  "sanitizer": "address",
+  "harness": "zip_read_metadata_fuzzer",
+  "build_script": "libzip-build.sh",
+  "reference_url": "https://oss-fuzz.com/download?testcase_id=5950954642669568",
+  "reference_sha256": "6535527d8c789032e6aff26aa6d53f32b039a368c90998029f9142ad4dbfdbcc",
+  "expected_crash": {
+    "type": "heap-buffer-overflow",
+    "file": "lib/zip_source_buffer.c",
+    "line": 535,
+    "function": "buffer_read"
+  },
+  "entry_point": "ossfuzz/zip_read_metadata_fuzzer.c; raw ZIP archive, metadata paths only",
+  "dependencies": [
+    {
+      "name": "zlib",
+      "repo": "https://github.com/madler/zlib.git",
+      "commit": "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+      "dest": "deps/zlib"
+    }
+  ],
+  "notes": "libzip is built with only zlib; bzip2, lzma, zstd, OpenSSL and GnuTLS are disabled because the metadata fuzzer does not need them. zlib v1.3.1 is pinned as a source dependency. OSV names read_data, but the ASan frame is buffer_read in zip_source_buffer.c:535."
+}

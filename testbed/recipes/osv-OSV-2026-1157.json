@@ -1,0 +1,27 @@
+{
+  "id": "osv:OSV-2026-1157",
+  "project": "zxc",
+  "source_dir": "/src/zxc",
+  "platform": "linux/amd64",
+  "repo": "https://github.com/hellobertrand/zxc.git",
+  "vuln_commit": "b89b134299971f1edd2cefb9f1eaf3d93fdf1dad",
+  "fix_commit": "399de305e5ca322a0144c86ec85dd77757669c60",
+  "oss_fuzz_repo": "https://github.com/google/oss-fuzz.git",
+  "oss_fuzz_commit": "ff54b9b3f371e7c2329a47dfff358fe05e9a2773",
+  "oss_fuzz_project": "zxc",
+  "base_builder": "gcr.io/oss-fuzz-base/base-builder@sha256:415ccd95bff8714ae7bd5b6989f2cbc159e9715f27284f763ddfae88b5e9997b",
+  "fuzzing_language": "c",
+  "sanitizer": "address",
+  "harness": "zxc_fuzzer_decompress",
+  "build_script": "zxc-build.sh",
+  "reference_url": "https://oss-fuzz.com/download?testcase_id=4590193643159552",
+  "reference_sha256": "06552a3302e2b2f743c8ba33e5a0f2fe553fd9d338053e0bdf432acb05851bf0",
+  "expected_crash": {
+    "type": "memcpy-param-overlap",
+    "file": "src/lib/zxc_decompress.c",
+    "line": 1041,
+    "function": "zxc_decode_block_glo_impl"
+  },
+  "entry_point": "tests/fuzz_decompress.c; raw compressed frame",
+  "notes": "OSV records introduced_range as unknown:b89b134. The fix commit 399de30 is titled 'Enhance output buffer overflow checks during decompression (#546426939)'."
+}
