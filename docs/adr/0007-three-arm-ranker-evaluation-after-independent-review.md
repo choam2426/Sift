@@ -68,7 +68,7 @@ Vikunja 한 사례로 세 arm을 각 1회 실행했다. 세 arm 모두 `reproduc
 
 Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 모두 채점했다. `./jev rank ... --top 10`을 실행했고, 명령이 120초를 넘어 background로 넘어간 뒤 출력 파일을 읽었다.
 
-- Jev 점수: 355개 scored, 5개 stats/오류. 입력 8,114,410토큰, 비용 $0.341.
+- Jev 점수: 355개 scored, 5개 stats 호출(채점 오류 없음). 입력 8,114,410토큰, 비용 $0.341.
 - 대상 route `PUT /projects/{project}/views/{view}/buckets/{bucket}/tasks`의 점수는 **0.45**, 순위 **32/355 (9.0%)**였다. Stage 1의 oracle 질문 순위 28/355와 비슷하거나 조금 나빴다.
 - 상위 10개는 `/tasks/{projecttask}/labels`(0.83), `/tasks/:projecttask/labels`(0.63), `/tasks/:task/relations`(0.62) 등이었고, 대상 route는 top10에 없었다.
 - 에이전트는 top10 출력을 읽었지만, 이후 `pkg/routes`에서 bucket/task route를 직접 grep해 대상을 찾았다. 즉 이 실행에서 Jev ranking은 탐색을 대상으로 유도하지 못했고, route index와 소스 검색이 발견을 이끌었다.
