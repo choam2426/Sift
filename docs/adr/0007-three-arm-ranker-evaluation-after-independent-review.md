@@ -46,6 +46,24 @@ Mythos 5.1과 GPT-6 Astra가 ADR 0006의 설계를 독립 리뷰했고, 둘 다 
 - Kite e2e(순정 $1.436 vs Jev $1.373)는 **development pilot**이다. Jev ranking의 효과로 해석하지 않는다.
 - 두 결과 모두 3-arm confirmatory의 가설 생성 자료로만 쓴다.
 
+## Vikunja 3-arm 파일럿 (2026-10-19)
+
+Vikunja 한 사례로 세 arm을 각 1회 실행했다. 세 arm 모두 `reproduced`였다.
+
+| 항목 | vanilla | bundles | jev |
+| --- | ---: | ---: | ---: |
+| Claude 비용 | $5.363 | $2.984 | $2.679 |
+| Jev 비용 | — | — | $0.341 |
+| 총비용 | $5.363 | **$2.984** | $3.019 |
+| 턴 | 56 | 33 | 47 |
+| 소요 시간 | 609초 | 286초 | 359초 |
+| 감사 | 경계 이탈 없음 | workspace 내부 상대 경로 2건 | 경계 이탈 없음 |
+
+- route index를 제공한 `bundles`가 vanilla보다 비용 44%, 턴 41%를 줄였다.
+- `jev`는 `bundles`를 이기지 못했다. Jev 355요청·811만 토큰을 썼고, 총비용은 $0.035 더 높았다.
+- 이는 독립 리뷰의 경고와 일치한다. **구조화된 route extraction이 주된 driver일 수 있고, Jev ranking의 증분 효과는 아직 관측되지 않았다.**
+- arm당 1회의 파일럿이므로 confirmatory 결과가 아니다.
+
 ## 다음
 
 1. `experiments/logic-ranker/e2e`를 `vanilla`/`bundles`/`jev` 3-arm과 case config로 일반화한다.
@@ -53,6 +71,7 @@ Mythos 5.1과 GPT-6 Astra가 ADR 0006의 설계를 독립 리뷰했고, 둘 다 
 3. evaluator hardening과 contamination 통제를 구현한다.
 4. 작은 3-arm 파일럿을 Vikunja 또는 Pocket ID에서 실행한다.
 5. pilot 분산으로 confirmatory case 수와 run 수를 정하고, blind held-out 사례를 고른다.
+6. Vikunja 결과를 반복해 `bundles` vs `jev` 차이가 우연인지 확인한다. Pocket ID에서도 같은 3-arm을 실행한다.
 
 ## 한계
 
