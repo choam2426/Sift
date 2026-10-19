@@ -21,9 +21,9 @@ Mythos 5.1과 GPT-6 Astra가 ADR 0006의 설계를 독립 리뷰했고, 둘 다 
 
 1. **3-arm으로 평가한다.**
    - `vanilla`: 소스·도구·조사/검증 가이드만. route bundle 없음.
-   - `bundles`: 같은 route bundle과 가이드, **Jev 없이 고정 순서**(사전 등록한 random/alphabetical order).
+   - `route-index`: 같은 route bundle과 가이드, **Jev 없이 고정 순서**(사전 등록한 random/alphabetical order).
    - `jev`: 같은 route bundle과 가이드, Jev ranker CLI와 고정 질문·top-K.
-   - `vanilla` vs `bundles`는 bundle/extraction의 효과, `bundles` vs `jev`는 ranking의 증분 효과를 뜻한다.
+   - `vanilla` vs `route-index`는 bundle/extraction의 효과, `route-index` vs `jev`는 ranking의 증분 효과를 뜻한다.
 2. **Jev는 ranker다.** 점수는 우선순위 신호이며 증거가 아니다. Jev에게 검증·설명·위치를 요구하지 않는다.
 3. **질문과 K를 동결한다.** 사례별 oracle 질문은 ceiling 진단으로만 남기고, 실행 전에 bug-class별 generic 질문과 K를 고정한다. 실행 중 agent가 추가 질문을 하면 모두 기록하되, 사전 질문 결과와 분리해 보고한다.
 4. **주 지표는 cap에서 censoring한 cost-to-first-validated-finding이다.** 성공 확률을 함께 보고한다. “상한 아래 총비용”만으로 우열을 주장하지 않는다. 보조 지표는 turns, wall time, Jev 요청·토큰, extraction 비용, false positive다.
@@ -36,9 +36,9 @@ Mythos 5.1과 GPT-6 Astra가 ADR 0006의 설계를 독립 리뷰했고, 둘 다 
    - `.git`·fix 이력·advisory를 제거하고 네트워크를 차단한다.
    - report/test를 blind adjudication으로 검토해 대상 route/조건이 같은지 확인한다.
 7. **오염을 통제한다.** agent와 Jev 모두 웹을 쓰지 않고, Jev artifact와 training exclusion을 기록한다. 공개 시점만으로 오염이 없다고 주장하지 않는다.
-8. **추출 비용을 기록한다.** route extraction/bundle 생성은 사례 준비 비용으로 별도 기록하고, `bundles`·`jev`에 같은 bundle을 제공한다. 한쪽에만 무료로 주지 않는다.
+8. **추출 비용을 기록한다.** route extraction/bundle 생성은 사례 준비 비용으로 별도 기록하고, `route-index`·`jev`에 같은 bundle을 제공한다. 한쪽에만 무료로 주지 않는다.
 9. **표본 계획을 단계화한다.** 먼저 3-arm × 2 cases × 2 runs 파일럿으로 분산을 잰다. confirmatory는 5~10 runs/arm/case, 8~12 blind cases를 목표로 하되, pilot 분산으로 power를 계산해 실행 전에 고정한다.
-10. **판정 규칙을 미리 정한다.** Jev ranking은 `jev`가 `bundles`를 주 지표에서 이기고, 사례별 paired 분석의 신뢰구간이 0을 제외할 때만 효과가 있다고 주장한다. `bundles`가 `vanilla`를 이기면 extractor/bundle이 제품의 핵심이라는 결론을 허용한다.
+10. **판정 규칙을 미리 정한다.** Jev ranking은 `jev`가 `route-index`를 주 지표에서 이기고, 사례별 paired 분석의 신뢰구간이 0을 제외할 때만 효과가 있다고 주장한다. `route-index`가 `vanilla`를 이기면 extractor/bundle이 제품의 핵심이라는 결론을 허용한다.
 
 ## 현재 결과의 지위
 
@@ -50,7 +50,7 @@ Mythos 5.1과 GPT-6 Astra가 ADR 0006의 설계를 독립 리뷰했고, 둘 다 
 
 Vikunja 한 사례로 세 arm을 각 1회 실행했다. 세 arm 모두 `reproduced`였다.
 
-| 항목 | vanilla | bundles | jev |
+| 항목 | vanilla | route-index | jev |
 | --- | ---: | ---: | ---: |
 | Claude 비용 | $5.363 | $2.984 | $2.679 |
 | Jev 비용 | — | — | $0.341 |
@@ -59,19 +59,31 @@ Vikunja 한 사례로 세 arm을 각 1회 실행했다. 세 arm 모두 `reproduc
 | 소요 시간 | 609초 | 286초 | 359초 |
 | 감사 | 경계 이탈 없음 | workspace 내부 상대 경로 2건 | 경계 이탈 없음 |
 
-- route index를 제공한 `bundles`가 vanilla보다 비용 44%, 턴 41%를 줄였다.
-- `jev`는 `bundles`를 이기지 못했다. Jev 355요청·811만 토큰을 썼고, 총비용은 $0.035 더 높았다.
+- route index를 제공한 `route-index`가 vanilla보다 비용 44%, 턴 41%를 줄였다.
+- `jev`는 `route-index`를 이기지 못했다. Jev 355요청·811만 토큰을 썼고, 총비용은 $0.035 더 높았다.
 - 이는 독립 리뷰의 경고와 일치한다. **구조화된 route extraction이 주된 driver일 수 있고, Jev ranking의 증분 효과는 아직 관측되지 않았다.**
 - arm당 1회의 파일럿이므로 confirmatory 결과가 아니다.
 
+## Vikunja에서 Jev 사용 방식 확인
+
+Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 모두 채점했다. `./jev rank ... --top 10`을 실행했고, 명령이 120초를 넘어 background로 넘어간 뒤 출력 파일을 읽었다.
+
+- Jev 점수: 355개 scored, 5개 stats/오류. 입력 8,114,410토큰, 비용 $0.341.
+- 대상 route `PUT /projects/{project}/views/{view}/buckets/{bucket}/tasks`의 점수는 **0.45**, 순위 **32/355 (9.0%)**였다. Stage 1의 oracle 질문 순위 28/355와 비슷하거나 조금 나빴다.
+- 상위 10개는 `/tasks/{projecttask}/labels`(0.83), `/tasks/:projecttask/labels`(0.63), `/tasks/:task/relations`(0.62) 등이었고, 대상 route는 top10에 없었다.
+- 에이전트는 top10 출력을 읽었지만, 이후 `pkg/routes`에서 bucket/task route를 직접 grep해 대상을 찾았다. 즉 이 실행에서 Jev ranking은 탐색을 대상으로 유도하지 못했고, route index와 소스 검색이 발견을 이끌었다.
+- 결과적으로 `route-index`($2.984)와 `jev`($3.019)의 차이는 Jev에 유리하지 않았다. Jev 비용 $0.341과 순위 계산 시간이 추가됐다.
+
+이 한 번의 실행은 “generic 질문으로도 Jev가 유용한 ranking을 준다”는 가설을 지지하지 않는다. 다음 반복에서는 질문을 더 구체화하거나, top-K를 넓히거나, Jev를 후보 필터가 아닌 보조 신호로만 쓰는 방식을 비교해야 한다.
+
 ## 다음
 
-1. `experiments/logic-ranker/e2e`를 `vanilla`/`bundles`/`jev` 3-arm과 case config로 일반화한다.
+1. `experiments/logic-ranker/e2e`를 `vanilla`/`route-index`/`jev` 3-arm과 case config로 일반화한다.
 2. generic 질문·K·arms·metric·run count를 pre-register한다.
 3. evaluator hardening과 contamination 통제를 구현한다.
 4. 작은 3-arm 파일럿을 Vikunja 또는 Pocket ID에서 실행한다.
 5. pilot 분산으로 confirmatory case 수와 run 수를 정하고, blind held-out 사례를 고른다.
-6. Vikunja 결과를 반복해 `bundles` vs `jev` 차이가 우연인지 확인한다. Pocket ID에서도 같은 3-arm을 실행한다.
+6. Vikunja 결과를 반복해 `route-index` vs `jev` 차이가 우연인지 확인한다. Pocket ID에서도 같은 3-arm을 실행한다.
 
 ## 한계
 

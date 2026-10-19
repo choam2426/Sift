@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Three-arm Go logic-bug e2e harness.
 
-    python3 e2e.py prepare --case kite --arm vanilla|bundles|jev --workspace <dir>
+    python3 e2e.py prepare --case kite --arm vanilla|route-index|jev --workspace <dir>
     python3 e2e.py run --workspace <dir> --max-budget-usd 30
     python3 e2e.py teardown --workspace <dir>
 """
@@ -64,7 +64,7 @@ esac
 
 def task(case, arm):
     routes = ''
-    if arm in ('bundles', 'jev'):
+    if arm in ('route-index', 'jev'):
         routes = '''
 A route index is provided at `routes.jsonl`. It contains decision-path units (route registration, middleware, handler, related functions), ordered by ID. Use it as an investigation aid; it is not a list of confirmed bugs.
 '''
@@ -136,7 +136,7 @@ def cmd_prepare(args):
     (ws / 'agent' / 'tb').write_text(tb_wrapper(name, case['workdir'])); (ws / 'agent' / 'tb').chmod(0o755)
     (ws / 'agent' / 'TASK.md').write_text(task(case, args.arm))
     jev_sock = None
-    if args.arm in ('bundles', 'jev'):
+    if args.arm in ('route-index', 'jev'):
         shutil.copy(expand(case['routes']), ws / 'agent' / 'routes.jsonl')
         (ws / 'agent' / 'ROUTES.md').write_text(routes_guide(case))
     if args.arm == 'jev':
@@ -293,7 +293,7 @@ def cmd_teardown(args):
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest='cmd', required=True)
-    p = sub.add_parser('prepare'); p.add_argument('--case', choices=sorted(CASES), required=True); p.add_argument('--arm', choices=('vanilla','bundles','jev'), required=True); p.add_argument('--workspace', required=True)
+    p = sub.add_parser('prepare'); p.add_argument('--case', choices=sorted(CASES), required=True); p.add_argument('--arm', choices=('vanilla','route-index','jev'), required=True); p.add_argument('--workspace', required=True)
     p = sub.add_parser('run'); p.add_argument('--workspace', required=True); p.add_argument('--model', default=MODEL); p.add_argument('--effort', default='high'); p.add_argument('--max-budget-usd', type=float, default=30.0)
     p = sub.add_parser('teardown'); p.add_argument('--workspace', required=True)
     args = ap.parse_args()

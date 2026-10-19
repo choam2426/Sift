@@ -1,12 +1,12 @@
 # Go logic-bug e2e harness
 
-2026-10-19 기준 3-arm harness. `vanilla` / `bundles` / `jev`를 같은 소스·도구·금전 상한에서 비교한다. 2-arm Kite 결과는 development pilot이며, confirmatory 프로토콜은 [ADR 0007](../../../docs/adr/0007-three-arm-ranker-evaluation-after-independent-review.md)을 따른다.
+2026-10-19 기준 3-arm harness. `vanilla` / `route-index` / `jev`를 같은 소스·도구·금전 상한에서 비교한다. 2-arm Kite 결과는 development pilot이며, confirmatory 프로토콜은 [ADR 0007](../../../docs/adr/0007-three-arm-ranker-evaluation-after-independent-review.md)을 따른다.
 
 ## 구성
 
 - `prepare`: 취약 리비전 소스를 workspace에 풀고 Go 컨테이너를 띄운다. `tb test/build/exec` 래퍼를 만든다.
 - `--arm vanilla`: 소스·도구·가이드만. route bundle 없음.
-- `--arm bundles`: 같은 route bundle과 가이드, Jev 없이 고정 ID 순서.
+- `--arm route-index`: 같은 route bundle과 가이드, Jev 없이 고정 ID 순서.
 - `--arm jev`: 같은 bundle과 가이드, Jev ranker CLI·고정 질문·top-K.
 - `run`: Claude Code를 깨끗한 설정으로 실행하고 `findings/`를 평가한다.
 - `teardown`: 컨테이너와 Jev proxy를 정리한다.
@@ -31,8 +31,8 @@ docker run --rm -v <vuln-source>:/src -w /src -v sift-go-mod-cache:/go/pkg/mod \
 python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm vanilla --workspace ~/sift-runs/logic-e2e/kite-vanilla
 python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-vanilla --max-budget-usd 30
 
-python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm bundles --workspace ~/sift-runs/logic-e2e/kite-bundles
-python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-bundles --max-budget-usd 30
+python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm route-index --workspace ~/sift-runs/logic-e2e/kite-route-index
+python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-route-index --max-budget-usd 30
 
 python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm jev --workspace ~/sift-runs/logic-e2e/kite-jev
 python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-jev --max-budget-usd 30
@@ -40,7 +40,7 @@ python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2
 python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 ```
 
-`bundles`와 `jev`에는 같은 `routes.jsonl`과 `ROUTES.md`가 추가된다. `jev`에는 고정 질문·top-K를 담은 `JEV.md`와 `./jev`가 추가된다. Jev 비용은 proxy 로그(`control/jev-calls.jsonl`)에 남고 `run.json`의 `jev.cost_usd`에 기록된다.
+`route-index`와 `jev`에는 같은 `routes.jsonl`과 `ROUTES.md`가 추가된다. `jev`에는 고정 질문·top-K를 담은 `JEV.md`와 `./jev`가 추가된다. Jev 비용은 proxy 로그(`control/jev-calls.jsonl`)에 남고 `run.json`의 `jev.cost_usd`에 기록된다.
 
 ## 평가
 
@@ -67,6 +67,23 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 
 원자료: `~/sift-runs/measurements/logic-e2e-kite/`.
 
+## Vikunja 3-arm pilot
+
+| 항목 | vanilla | route-index | jev |
+| --- | ---: | ---: | ---: |
+| 판정 | reproduced | reproduced | reproduced |
+| Claude 비용 | $5.363 | $2.984 | $2.679 |
+| Jev 비용 | — | — | $0.341 |
+| 총비용 | **$5.363** | **$2.984** | **$3.019** |
+| 턴 | 56 | 33 | 47 |
+| 소요 시간 | 609초 | 286초 | 359초 |
+| 감사 | 경계 이탈 없음 | workspace 내부 상대 경로 2건 | 경계 이탈 없음 |
+
+- route index가 vanilla 대비 비용 44%, 턴 41%를 줄였다.
+- Jev는 route-index를 이기지 못했다. Jev 355요청·8,114,410토큰을 썼고, 총비용은 $0.035 더 높았다.
+- 고정 generic 질문에서 대상 route는 **32/355 (9.0%)**였고 top10에 없었다. 에이전트는 top10을 읽은 뒤 `pkg/routes`에서 bucket/task route를 직접 grep해 찾았다. 이 실행에서 Jev ranking은 탐색을 대상으로 유도하지 못했다.
+- arm당 1회의 파일럿이다. 원자료: `~/sift-runs/measurements/logic-e2e-vikunja/`.
+
 ## 다음
 
-Pocket ID(refresh state machine)와 Vikunja(cross-tenant IDOR)로 확장한다. Kite는 ceiling/control로 둔다. Jev arm의 `routes.jsonl` 생성도 `extract_routes`로 자동화하고, 질문 템플릿은 사전 고정한다.
+Vikunja 3-arm을 반복해 route-index vs jev 차이가 우연인지 확인하고, Pocket ID 3-arm을 실행한다. 그 뒤 blind held-out 사례로 confirmatory 규모를 정한다.
