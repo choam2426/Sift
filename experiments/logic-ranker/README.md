@@ -1,6 +1,6 @@
 # Logic-bug Jev ranker 실험
 
-2026-10-19 기준. 활성 실험은 Go 인가/접근 제어 로직 버그에서 **Jev 1.14.0을 후보 ranker로 쓰는 것**이다. Jev는 검증자가 아니라 우선순위 신호다. 결정과 근거는 [ADR 0006](../../docs/adr/0006-logic-bug-ranker-experiment.md)에 있다.
+2026-10-19 기준. 활성 실험은 Go 인가/접근 제어 로직 버그에서 **Jev 1.14.0을 후보 ranker로 쓰는 것**이다. Jev는 검증자가 아니라 우선순위 신호다. 결정과 근거는 [ADR 0006](../../docs/adr/0006-logic-bug-ranker-experiment.md), 3-arm 평가 프로토콜은 [ADR 0007](../../docs/adr/0007-three-arm-ranker-evaluation-after-independent-review.md)에 있다.
 
 ## 사례
 

@@ -1,7 +1,7 @@
 # ADR 0006: 활성 실험은 Go 인가 로직 버그의 Jev ranker다
 
 - 날짜: 2026-10-19
-- 상태: 채택. C/C++ 메모리 안전성 testbed(ADR 0001~0005)는 파일럿·대조로 보존하고, 활성 실험은 이 ADR을 따른다.
+- 상태: Stage 1과 2-arm e2e 파일럿을 기록했다. 2-arm e2e는 독립 리뷰 후 [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md)의 3-arm 프로토콜로 대체한다. C/C++ testbed는 파일럿·대조로 보존한다.
 - 관련: [ADR 0001](0001-jev-collaboration-research-charter.md), [ADR 0003](0003-cost-as-matched-budget-and-first-run-measures-consumption.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md), [ADR 0005](0005-pinned-source-build-for-post-cutoff-cases.md)
 
 ## 맥락

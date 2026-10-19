@@ -6,7 +6,7 @@
 
 - **범위:** Go 인가/접근 제어 로직 버그. C/C++ 메모리 안전성 testbed는 파일럿·대조 자료로 보존한다.
 - **Jev의 역할:** 후보 ranker. `jev-1.14.0`의 Noul 점수로 조사 우선순위를 정하며, 검증·설명·위치를 맡기지 않는다.
-- **비교:** 순정 강한 에이전트와 Jev ranker가 주어진 강한 에이전트. 같은 소스·도구·조사 가이드·금전 상한을 쓰고, Jev 비용은 총예산에 포함한다.
+- **비교:** `vanilla`(bundle 없음), `bundles`(같은 bundle·가이드, Jev 없이 고정 순서), `jev`(bundle·가이드·Jev ranker) 3-arm. 같은 소스·도구·금전 상한을 쓰고 Jev 비용은 총예산에 포함한다([ADR 0007](docs/adr/0007-three-arm-ranker-evaluation-after-independent-review.md)).
 - **단위:** 함수가 아니라 라우트 결정 경로. 라우트 등록·미들웨어 체인·핸들러·직접 호출 결정 함수·상태·설정을 포함한다.
 - **사례:** Kite, Pocket ID, Vikunja, Arcane. 취약·수정 리비전과 숨겨진 테스트 오라클을 고정했다([ADR 0006](docs/adr/0006-logic-bug-ranker-experiment.md)).
 - **Stage 1 결과:** 라우트 단위에서 알려진 결정 경로가 Jev top 13% 안에 들었다. Kite 1/130, Pocket ID 2/110, Vikunja 28/355, Arcane 18/147. 길이 기준보다 네 사례 모두 나았다.

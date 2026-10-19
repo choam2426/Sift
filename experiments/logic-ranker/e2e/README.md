@@ -1,10 +1,13 @@
 # Go logic-bug e2e harness
 
-2026-10-19 기준 Kite 파일럿. 순정 agent와 Jev ranker agent를 같은 소스·도구·금전 상한에서 비교한다.
+2026-10-19 기준 3-arm harness. `vanilla` / `bundles` / `jev`를 같은 소스·도구·금전 상한에서 비교한다. 2-arm Kite 결과는 development pilot이며, confirmatory 프로토콜은 [ADR 0007](../../../docs/adr/0007-three-arm-ranker-evaluation-after-independent-review.md)을 따른다.
 
 ## 구성
 
 - `prepare`: 취약 리비전 소스를 workspace에 풀고 Go 컨테이너를 띄운다. `tb test/build/exec` 래퍼를 만든다.
+- `--arm vanilla`: 소스·도구·가이드만. route bundle 없음.
+- `--arm bundles`: 같은 route bundle과 가이드, Jev 없이 고정 ID 순서.
+- `--arm jev`: 같은 bundle과 가이드, Jev ranker CLI·고정 질문·top-K.
 - `run`: Claude Code를 깨끗한 설정으로 실행하고 `findings/`를 평가한다.
 - `teardown`: 컨테이너와 Jev proxy를 정리한다.
 - `jev_proxy.py`: 호스트에서 API 키를 들고 Unix socket으로 Jev를 호출한다. key는 workspace 밖에 있고 agent는 읽지 못한다.
@@ -25,22 +28,25 @@ docker run --rm -v <vuln-source>:/src -w /src -v sift-go-mod-cache:/go/pkg/mod \
 ## 실행
 
 ```bash
-python3 experiments/logic-ranker/e2e/e2e.py prepare --arm vanilla --workspace ~/sift-runs/logic-e2e/kite-vanilla-r2
-python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-vanilla-r2 --max-budget-usd 30
+python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm vanilla --workspace ~/sift-runs/logic-e2e/kite-vanilla
+python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-vanilla --max-budget-usd 30
 
-python3 experiments/logic-ranker/e2e/e2e.py prepare --arm jev --workspace ~/sift-runs/logic-e2e/kite-jev-r1
-python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-jev-r1 --max-budget-usd 30
+python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm bundles --workspace ~/sift-runs/logic-e2e/kite-bundles
+python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-bundles --max-budget-usd 30
+
+python3 experiments/logic-ranker/e2e/e2e.py prepare --case kite --arm jev --workspace ~/sift-runs/logic-e2e/kite-jev
+python3 experiments/logic-ranker/e2e/e2e.py run --workspace ~/sift-runs/logic-e2e/kite-jev --max-budget-usd 30
 
 python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 ```
 
-Jev arm에는 `routes.jsonl`과 `JEV.md`가 추가된다. `./jev rank --units routes.jsonl --question "..." --top 20`으로 후보를 정렬한다. Jev 비용은 proxy 로그(`control/jev-calls.jsonl`)에 남고 총비용에 별도로 더해야 한다.
+`bundles`와 `jev`에는 같은 `routes.jsonl`과 `ROUTES.md`가 추가된다. `jev`에는 고정 질문·top-K를 담은 `JEV.md`와 `./jev`가 추가된다. Jev 비용은 proxy 로그(`control/jev-calls.jsonl`)에 남고 `run.json`의 `jev.cost_usd`에 기록된다.
 
 ## 평가
 
-에이전트는 `findings/<name>/test.go`를 제출한다. harness는 이 테스트를 **pristine 취약 소스**와 **pristine 수정 소스**의 `pkg/kube`에 복사하고 `go test ./pkg/kube`를 실행한다. 취약판 실패·수정판 통과면 `reproduced`다. 에이전트가 수정한 소스는 평가에 쓰지 않는다.
+에이전트는 `findings/<name>/test.go`를 제출한다. harness는 테스트 함수 이름만 `-run`으로 실행해 무관한 패키지 테스트 실패를 배제한다. **pristine 취약·수정·decoy 트리**에서 각 3회 실행하고, 취약판은 관련 assertion 실패, 수정판은 통과, decoy는 같은 실패여야 `reproduced`다. 컴파일 실패·timeout·무관한 panic은 reject다. `semantic_review`는 별도 수동 검토 항목이다.
 
-## Kite 파일럿 결과
+## Kite 2-arm development pilot (ADR 0006, superseded for e2e)
 
 | 항목 | 순정 | Jev ranker |
 | --- | ---: | ---: |
