@@ -91,6 +91,26 @@ Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 �
 - generic 질문에서 대상 route는 r1 32/355(9.0%), r2 19/355(5.4%)였고 두 번 모두 top-10 밖이었다. r1 agent는 top-10을 읽은 뒤 소스 grep으로 대상을 찾았다.
 - 현재까지 가장 강한 결론은 **구조화된 route extraction이 주된 driver**라는 것이다. Jev ranking의 증분 효과는 아직 관측되지 않았다.
 
+## Pocket ID (state-machine 사례)
+
+Pocket ID는 OIDC refresh token의 인가 상태를 다시 확인하지 않는 사례다. Vikunja와 달리 route path 자체가 아니라 `internal/service`의 상태 전이가 결함의 위치다.
+
+| arm | 실행 | 총비용 | 턴 | 시간 | 판정 | 감사 |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| vanilla | 1 | $7.837 | 71 | 820초 | reproduced | clean |
+| route-index | 1 | $8.758 | 120 | 881초 | reproduced | clean |
+| jev | r1 | $2.758 | 29 | 379초 | reproduced | docker 1 |
+| jev | r2 | $2.446 | 24 | 265초 | rejected | parent-path 1 |
+| jev | r3 | $2.355 | 24 | 261초 | rejected | clean |
+| jev | r4 | **$2.181** | 30 | 230초 | **reproduced** | **clean** |
+
+- 고정 generic 질문에서 대상 route `POST /oidc/token`은 **4/110 (top10 안)**이었다. Vikunja(32/355, 19/355)와 달리 Jev ranking이 대상 route를 top10에 올렸다.
+- 깨끗한 유효 실행(r4)은 vanilla보다 비용 72%, 시간 72% 적고, route-index보다 비용 75%, 시간 74% 적다.
+- **route-index는 이 사례에서 도움이 되지 않았다.** vanilla보다 비용·턴·시간이 모두 늘었다. 결함이 route 등록이 아니라 service 내부의 상태 재확인에 있었기 때문으로 보인다.
+- **Jev의 비용 이득은 크지만 신뢰성이 낮다.** 4회 중 2회만 유효했고, 그중 감사까지 깨끗한 것은 1회다. r2는 수정판에서 고쳐지지 않는 그룹 변형을, r3는 대상 버그는 맞혔지만 수정판에서도 통과해야 할 테스트에 토큰 레코드 삭제 단언을 넣어 reject됐다.
+- 4회 시도 비용을 모두 합치면 $9.740이고, 유효 발견 2건당 $4.87, 깨끗한 유효 발견 1건당 $9.74다. 전자는 vanilla보다 38% 싸지만, **한 번의 시도로 유효 발견을 보장하지는 못한다.**
+- vanilla/route-index는 arm당 1회뿐이므로 이 절도 파일럿이다. 다만 효과 크기가 커서 “Pocket ID 같은 state-machine 사례에서는 route index보다 Jev가 더 유망하다”는 방향은 지지된다.
+
 ## 다음
 
 1. `experiments/logic-ranker/e2e`를 `vanilla`/`route-index`/`jev` 3-arm과 case config로 일반화한다.
@@ -98,7 +118,7 @@ Jev arm은 사전 고정한 generic 질문 하나로 `routes.jsonl` 355개를 �
 3. evaluator hardening과 contamination 통제를 구현한다.
 4. 작은 3-arm 파일럿을 Vikunja 또는 Pocket ID에서 실행한다.
 5. pilot 분산으로 confirmatory case 수와 run 수를 정하고, blind held-out 사례를 고른다.
-6. Pocket ID에서 같은 3-arm을 실행하고, Vikunja는 필요하면 반복을 더 늘린다.
+6. Kite와 Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복한다.
 
 ## 한계
 

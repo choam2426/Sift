@@ -82,8 +82,25 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - route index가 vanilla 대비 비용 44%, 턴 41%를 줄였다.
 - Jev는 route-index를 이기지 못했다. Jev 355요청·8,114,410토큰을 썼고, 총비용은 $0.035 더 높았다.
 - 고정 generic 질문에서 대상 route는 r1 **32/355(9.0%)**, r2 **19/355(5.4%)**였고 둘 다 top10 밖이었다. r1 에이전트는 top10을 읽은 뒤 `pkg/routes`에서 bucket/task route를 직접 grep해 찾았다. Jev ranking은 탐색을 대상으로 유도하지 못했다.
-- arm당 1회의 파일럿이다. 원자료: `~/sift-runs/measurements/logic-e2e-vikunja/`.
+- arm당 2회의 파일럿이다. r1+r2 평균은 vanilla $4.549, route-index $2.820, jev $2.777이었다. 원자료: `~/sift-runs/measurements/logic-e2e-vikunja/`.
+
+## Pocket ID 3-arm pilot
+
+| 항목 | vanilla | route-index | jev (clean r4) |
+| --- | ---: | ---: | ---: |
+| 판정 | reproduced | reproduced | reproduced |
+| Claude 비용 | $7.837 | $8.758 | $2.133 |
+| Jev 비용 | — | — | $0.048 |
+| 총비용 | **$7.837** | **$8.758** | **$2.181** |
+| 턴 | 71 | 120 | 30 |
+| 소요 시간 | 820초 | 881초 | 230초 |
+| 감사 | clean | clean | clean |
+
+- Jev ranking은 대상 route `POST /oidc/token`을 4/110(top10)에 올렸다. 깨끗한 r4는 vanilla보다 비용·시간 72%, route-index보다 75% 적었다.
+- route-index는 이 state-machine 사례에서 도움이 되지 않았다. 결함은 route 등록이 아니라 `internal/service`의 상태 재확인이었다.
+- Jev는 4회 중 2회 유효, 1회만 감사까지 깨끗했다. r2는 수정판에서 고쳐지지 않는 그룹 변형, r3는 과도한 테스트 단언으로 reject됐다. 4회 시도 $9.740, 유효 발견 2건당 $4.87이다.
+- vanilla/route-index는 arm당 1회뿐이다. 원자료: `~/sift-runs/measurements/logic-e2e-pocketid/`.
 
 ## 다음
 
-Vikunja 3-arm을 반복해 route-index vs jev 차이가 우연인지 확인하고, Pocket ID 3-arm을 실행한다. 그 뒤 blind held-out 사례로 confirmatory 규모를 정한다.
+Kite와 Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복하고, 그 뒤 blind held-out 사례로 confirmatory 규모를 정한다.
