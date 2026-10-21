@@ -103,6 +103,20 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - Jev는 4회 중 2회 유효, 1회만 감사까지 깨끗했다. r2는 수정판에서 고쳐지지 않는 그룹 변형, r3는 과도한 테스트 단언으로 reject됐다. 4회 시도 $9.740, 유효 발견 2건당 $4.87이다.
 - vanilla/route-index는 arm당 1회뿐이다. 원자료: `~/sift-runs/measurements/logic-e2e-pocketid/`.
 
+## Arcane 3-arm pilot
+
+| 항목 | vanilla r1 | vanilla r2 | route-index | jev |
+| --- | ---: | ---: | ---: | ---: |
+| 판정 | reproduced | reproduced | reproduced* | reproduced |
+| 총비용 | $1.800 | **$2.213** | $3.049 | $3.041 |
+| 턴 | 15 | 33 | 40 | 39 |
+| 시간 | 146초 | 185초 | 258초 | 274초 |
+| 감사 | docker 1 | clean | clean | clean |
+
+- `cases.json`의 `test_file_dir` 버그(`internal/auth` → `backend/internal/auth`)를 고쳤다. route-index는 경로 수정 후 재평가해 `reproduced`로 정정했다. 원자료: `~/sift-runs/measurements/logic-e2e-arcane/`.
+- Jev는 `GET /debug/pprof/`를 30/147로 올렸고 top10에 넣지 못했다. vanilla가 가장 빨랐고 ranker 두 arm은 약 52% 더 비쌌다.
+- Kite와 함께 **국소 gate 결함에서는 ranker overhead**라는 결과를 뒷받침한다.
+
 ## 다음
 
-Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복하고, 그 뒤 blind held-out 사례로 confirmatory 규모를 정한다.
+개발 사례 4개를 마쳤다. blind held-out 사례를 선정하고, 질문·K·run 수를 결과와 무관하게 pre-register한 뒤 confirmatory 규모를 정한다.

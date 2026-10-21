@@ -127,6 +127,36 @@ Kite는 국소적인 proxy path 검사 결함이라 vanilla도 빠르게 찾는 
 - Jev r2는 vanilla보다 15%, route-index보다 11% 비쌌다. Jev 비용 $0.0244(130요청, 582,063토큰)와 ranking 시간이 순수 overhead가 됐다.
 - **vanilla가 이미 빠른 국소 결함에서는 ranker가 이득을 주지 않는다**는 ceiling 결과다. 이 사례를 Jev의 일반 효과 근거로 쓰지 않는다.
 
+## Arcane (middleware/admin gate)
+
+Arcane는 `AdminRequired` 그룹 앞에서 environment token이 관리자 권한을 얻는 사례다. vanilla가 가장 빨랐다.
+
+| arm | 실행 | 총비용 | 턴 | 시간 | 판정 | 감사 |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| vanilla | r1 | $1.800 | 15 | 146초 | reproduced | docker 1 |
+| vanilla | r2 | **$2.213** | 33 | 185초 | **reproduced** | **clean** |
+| route-index | 1 | $3.049 | 40 | 258초 | reproduced* | clean |
+| jev | 1 | $3.041 | 39 | 274초 | reproduced | clean |
+
+- **harness 버그를 고쳤다.** `cases.json`의 `test_file_dir`가 `internal/auth`였는데 Arcane 모듈 루트는 `backend/`다. 테스트가 `backend/internal/auth`가 아닌 곳에 복사돼 “no tests to run”이 났고, route-index가 거짓 `rejected`가 됐다. 경로를 `backend/internal/auth`로 고친 뒤 재평가해 `reproduced`로 정정했다. 에이전트 전사와 비용은 그대로다.
+- Jev는 대상 `GET /debug/pprof/`를 **30/147**로 올렸고 top10에 넣지 못했다. 발견은 소스 검사에서 나왔다.
+- vanilla 평균(2회)은 $2.006/24턴, route-index는 $3.049/40턴, Jev는 $3.041/39턴이다. **ranker 두 arm 모두 vanilla보다 약 52% 비쌌다.**
+- Kite와 마찬가지로 **국소적이고 명시적인 gate 결함에서는 ranker overhead가 이득을 넘었다.**
+
+## 사례 간 요약
+
+| 사례 | 결함 모양 | vanilla | route-index | jev | 관측 |
+| --- | --- | ---: | ---: | ---: | --- |
+| Kite | 국소 proxy path 검사 | $1.719 | $1.664 | $1.980 | 차이 없음(ceiling) |
+| Vikunja | route 경로·cross-tenant IDOR | $4.549 | **$2.820** | $2.777 | route extraction이 주된 이득 |
+| Pocket ID | service 내부 상태 재확인 | $7.837 | $8.758 | **$2.181** | Jev 이득, 단 재시도 필요 |
+| Arcane | middleware/admin gate | **$2.006** | $3.049 | $3.041 | ranker overhead |
+
+- 네 사례 모두에서 이긴 단일 arm은 없다. **결함 모양에 따라 이득이 갈린다.**
+- route index는 경로·객체 인가처럼 route 구조가 단서인 사례에서 유망하고, service 내부 상태 전이나 국소 gate에서는 도움이 되지 않았다.
+- Jev는 service 내부 상태 사례에서 가장 유망했지만, 후보를 잘못 고르거나 테스트를 과도하게 쓰는 실패가 있었다. **ranker는 발견을 대체하지 않고, 검증·테스트 작성 비용을 없애지 않는다.**
+- Pocket ID의 Jev clean r4는 4회 시도 중 하나다. 시도 비용을 모두 합치면 $9.740으로, 유효 발견 2건당 $4.87, clean 유효 발견 1건당 $9.74다.
+
 ## 다음
 
 1. `experiments/logic-ranker/e2e`를 `vanilla`/`route-index`/`jev` 3-arm과 case config로 일반화한다.
@@ -134,7 +164,7 @@ Kite는 국소적인 proxy path 검사 결함이라 vanilla도 빠르게 찾는 
 3. evaluator hardening과 contamination 통제를 구현한다.
 4. 작은 3-arm 파일럿을 Vikunja 또는 Pocket ID에서 실행한다.
 5. pilot 분산으로 confirmatory case 수와 run 수를 정하고, blind held-out 사례를 고른다.
-6. Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복한다.
+6. 개발 사례 4개를 마쳤다. 이제 blind held-out 사례를 선정하고, 질문·K·run 수를 결과와 무관하게 pre-register한다.
 
 ## 한계
 
