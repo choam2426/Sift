@@ -119,10 +119,11 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 
 ## Held-out 준비 상태 (2026-10-21)
 
-- 후보 13개를 `heldout-candidates.json`에 고정했다. 현재 3-arm에 바로 쓸 수 있는 사례는 Gotify 하나다.
+- 후보 20개를 `heldout-candidates.json`에 기록했고, extractor v7으로 전체 후보를 추출했다. 경로 수는 `heldout-route-coverage.json`에 있다.
 - oracle 검증: OpenList, Gotify, Semaphore. 셋 다 취약판 실패·수정판 통과를 확인했다.
-- route coverage: Gotify 37개(대상 포함), OpenList 162개(대상 `/share/create` 누락), Semaphore 1개(gorilla/mux 미지원).
-- confirmatory 실행 전에 extractor를 mux·helper 등록까지 확장하거나 Gin/Echo 사례로 8개를 채워야 한다. 자세한 gate는 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
+- route coverage: Gotify 37, OpenList 233, Semaphore 329, Pterodactyl 35, New API 320, Cosmos 155, Arcane 106. 단, 이는 **path-string presence**일 뿐 handler identity·truncation 검사가 아니다.
+- Mythos 5.1과 GPT-6 Astra 리뷰가 둘 다 **REVISE**를 냈다. middleware 누락, Jev 질문 비대칭, coverage gate 미흡, publication date 누락, budget/semantic-review 문제가 P0다.
+- 따라서 현재 `eligible=true`인 사례는 없다. P0 수정과 재리뷰 전에는 confirmatory를 실행하지 않는다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
 
 ## 다음
 

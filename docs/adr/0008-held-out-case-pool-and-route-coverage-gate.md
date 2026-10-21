@@ -1,7 +1,7 @@
 # ADR 0008: held-out 사례는 oracle과 route coverage를 모두 통과해야 한다
 
 - 날짜: 2026-10-21
-- 상태: **제안, A 구현 완료**. Extractor를 mux·helper 등록까지 확장했고 독립 리뷰를 기다린다. confirmatory 실행은 아직 하지 않았다.
+- 상태: **REVISE, confirmatory 중단**. A 구현(commit `423d5b1`)을 Mythos 5.1과 GPT-6 Astra가 리뷰했고 둘 다 REVISE를 냈다. P0 수정 전에는 8개 held-out 실행을 시작하지 않는다.
 - 관련: [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md)
 
 ## 맥락
@@ -81,9 +81,38 @@ A의 구현 범위:
 - selector 이름과 package basename이 일치하는 handler 우선 해석
 - 중첩 호출에서 inner route 중복 방지
 
+## 독립 리뷰 (2026-10-21)
+
+Mythos 5.1과 GPT-6 Astra에게 extractor와 ADR 0008을 read-only로 리뷰시켰다. 둘 다 **REVISE**였다. 전체 보고서는 `~/sift-runs/notes/2026-10-21-heldout-review-mythos.md`, `~/sift-runs/notes/2026-10-21-heldout-review-astra.md`에 있다.
+
+공통 P0:
+
+1. **Coverage gate가 path string만 확인한다.** 대상 route의 `Members`가 fix가 건드린 함수를 포함하는지, `Truncated=false`인지 확인해야 한다. 지금은 경로가 같아도 handler가 다른 함수일 수 있다.
+2. **`Use`가 첫 middleware를 버린다.** `main.go`의 `x.Args[1:]`는 `Use(Auth)`에서 Auth를 잃는다. `x.Args[0:]`로 고치고, helper route에 caller middleware를 붙여야 한다.
+3. **Jev arm만 bug-class 질문을 받는다.** `route-index`와 `vanilla`에는 같은 질문이 없다. 질문을 모든 arm에 동일하게 주거나, 사례별 class 질문을 없애야 한다.
+4. **Advisory 공개일이 후보 JSON에 없다.** post-cutoff 기준을 사례별로 기록하고, 수정 커밋 날짜도 확인해야 한다.
+
+Astra가 추가로 지적한 P0:
+
+- `reproduced`를 semantic review 전에 성공으로 계산한다.
+- Jev 비용이 Claude 상한과 합산되지 않아 arm별 실효 상한이 다르다.
+- Docker socket 접근과 audit flag가 결과를 무효화하지 않는다.
+
+P1:
+
+- root mux/net/http router 누락, helper 재귀·빈 prefix·인자 위치, `joinRoute`의 already-prefixed shortcut, package alias 해석, silent drop, 진짜 decoy 부재, panic 처리, oracle-informed `task_scope`, extractor를 target에 맞춰 반복 수정한 점, 3회 반복의 power 부족, audit 재실행의 optional stopping.
+
+## 결정
+
+- Extractor는 reviewed commit `423d5b1`에 동결한다. 추가 target-fit 수정은 하지 않는다.
+- P0를 별도 변경으로 고치고, golden fixture와 target bundle의 handler identity/truncation 검사를 추가한다.
+- P0 수정 후 같은 두 리뷰어에게 재리뷰를 받는다. 그 전에는 confirmatory를 실행하지 않는다.
+- `eligible=true`는 oracle, handler identity, truncation, publication cutoff를 모두 통과한 뒤에만 쓴다.
+
 ## 아직 남은 일
 
-- A 구현에 대한 독립 리뷰(Mythos, Astra)와 P0/P1 수정
+- P0 수정: middleware, 질문 대칭, publication date, coverage gate, semantic review, budget ledger
+- golden extractor fixture와 runtime route recall 검사
 - Pterodactyl·New API·Cosmos의 behavior oracle
 - Cloudreve·Authorizer의 fix commit 확인
 - 8개 eligible 사례 확정 후 pre-registration 동결

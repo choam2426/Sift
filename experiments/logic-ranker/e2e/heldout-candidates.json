@@ -27,7 +27,9 @@
         "target_present": true,
         "note": "POST /share/create present after helper propagation"
       },
-      "eligible": true
+      "eligible": false,
+      "published": "2026-07-24",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "gotify-password-change",
@@ -50,7 +52,9 @@
         "target_present": true,
         "note": "POST /current/user/password present"
       },
-      "eligible": true
+      "eligible": false,
+      "published": "2026-10-15",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "semaphore-role-slug",
@@ -73,7 +77,9 @@
         "target_present": true,
         "note": "GET/POST /api/roles present after mux support"
       },
-      "eligible": true
+      "eligible": false,
+      "published": "2026-09-03",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "pterodactyl-jwt-scope",
@@ -96,7 +102,9 @@
         "target_present": true,
         "note": "POST /upload/file and GET /download/file present"
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-07-28",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "nginx-ui-secure-session",
@@ -119,7 +127,9 @@
         "target_present": false,
         "note": "cosy generic router not extracted"
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-10-15",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "new-api-root-token",
@@ -142,7 +152,9 @@
         "target_present": true,
         "note": "GET /api/user/ present after nested-group fix"
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-08-17",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "arcane-user-update-hierarchy",
@@ -165,7 +177,9 @@
         "target_present": null
       },
       "eligible": false,
-      "note": "same project as a development case; only use as backup"
+      "note": "same project as a development case; only use as backup",
+      "published": "2026-10-16",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "cloudreve-revoked-share",
@@ -188,7 +202,9 @@
         "target_present": true
       },
       "eligible": false,
-      "note": "fix commit not listed in advisory"
+      "note": "fix commit not listed in advisory",
+      "published": "2026-08-24",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "authorizer-oidc-email-link",
@@ -211,7 +227,9 @@
         "target_present": true
       },
       "eligible": false,
-      "note": "fix commit not listed in advisory"
+      "note": "fix commit not listed in advisory",
+      "published": "2026-08-14",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "woodpecker-agent-scope",
@@ -234,7 +252,9 @@
         "target_present": false
       },
       "eligible": false,
-      "note": "fix commit not listed in advisory"
+      "note": "fix commit not listed in advisory",
+      "published": "2026-07-14",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "rclone-restic-path",
@@ -256,7 +276,9 @@
         "count": 4,
         "target_present": false
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-08-05",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "traefik-request-target",
@@ -278,7 +300,9 @@
         "count": 0,
         "target_present": false
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-09-10",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "seaweedfs-jwt-prefix",
@@ -301,7 +325,9 @@
         "target_present": false,
         "note": "custom filer handler not extracted"
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-09-02",
+      "review_status": "coverage-gate-insufficient"
     },
     {
       "id": "cosmos-bearer-token",
@@ -324,7 +350,15 @@
         "target_present": true,
         "note": "/cosmos/api/constellation/public-devices present"
       },
-      "eligible": false
+      "eligible": false,
+      "published": "2026-07-28",
+      "review_status": "coverage-gate-insufficient"
     }
-  ]
+  ],
+  "review": {
+    "status": "REVISE",
+    "date": "2026-10-21",
+    "extractor_commit": "423d5b1",
+    "note": "both reviewers require P0 fixes before confirmatory runs"
+  }
 }
