@@ -67,6 +67,8 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 
 원자료: `~/sift-runs/measurements/logic-e2e-kite/`.
 
+3-arm r1에서도 결론은 같았다. vanilla $1.719/21턴, route-index $1.664/25턴, jev r2 $1.980/24턴으로 모두 `reproduced`였고, Jev는 대상 route를 2/130에 올렸지만 비용 이득이 없었다. 국소 결함에서는 ranker overhead만 남는다. 원자료: `~/sift-runs/measurements/logic-e2e-kite-r1/`.
+
 ## Vikunja 3-arm pilot
 
 | 항목 | vanilla | route-index | jev |
@@ -103,4 +105,4 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 
 ## 다음
 
-Kite와 Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복하고, 그 뒤 blind held-out 사례로 confirmatory 규모를 정한다.
+Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복하고, 그 뒤 blind held-out 사례로 confirmatory 규모를 정한다.

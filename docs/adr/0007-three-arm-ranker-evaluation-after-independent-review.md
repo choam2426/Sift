@@ -111,6 +111,22 @@ Pocket ID는 OIDC refresh token의 인가 상태를 다시 확인하지 않는 �
 - 4회 시도 비용을 모두 합치면 $9.740이고, 유효 발견 2건당 $4.87, 깨끗한 유효 발견 1건당 $9.74다. 전자는 vanilla보다 38% 싸지만, **한 번의 시도로 유효 발견을 보장하지는 못한다.**
 - vanilla/route-index는 arm당 1회뿐이므로 이 절도 파일럿이다. 다만 효과 크기가 커서 “Pocket ID 같은 state-machine 사례에서는 route index보다 Jev가 더 유망하다”는 방향은 지지된다.
 
+## Kite (ceiling case)
+
+Kite는 국소적인 proxy path 검사 결함이라 vanilla도 빠르게 찾는 ceiling case다. 세 arm 모두 `reproduced`였다.
+
+| arm | 실행 | 총비용 | 턴 | 시간 | 감사 |
+| --- | --- | ---: | ---: | ---: | --- |
+| vanilla | 1 | $1.719 | 21 | 169초 | parent-path 4(내부 경로) |
+| route-index | 1 | $1.664 | 25 | 207초 | clean |
+| jev | r1 | $1.858 | 26 | 256초 | docker 1 |
+| jev | r2 | $1.980 | 24 | 273초 | parent-path 1(내부 경로) |
+
+- Jev는 대상 route `GET /namespaces/:namespace/:kind/:name/proxy/*path`를 **2/130 (top10)**에 올렸다. 그런데도 비용 이득이 없었다.
+- route-index는 vanilla보다 3.2% 쌌지만 턴이 4개, 시간이 38초 더 많았다. 사실상 차이 없음.
+- Jev r2는 vanilla보다 15%, route-index보다 11% 비쌌다. Jev 비용 $0.0244(130요청, 582,063토큰)와 ranking 시간이 순수 overhead가 됐다.
+- **vanilla가 이미 빠른 국소 결함에서는 ranker가 이득을 주지 않는다**는 ceiling 결과다. 이 사례를 Jev의 일반 효과 근거로 쓰지 않는다.
+
 ## 다음
 
 1. `experiments/logic-ranker/e2e`를 `vanilla`/`route-index`/`jev` 3-arm과 case config로 일반화한다.
@@ -118,7 +134,7 @@ Pocket ID는 OIDC refresh token의 인가 상태를 다시 확인하지 않는 �
 3. evaluator hardening과 contamination 통제를 구현한다.
 4. 작은 3-arm 파일럿을 Vikunja 또는 Pocket ID에서 실행한다.
 5. pilot 분산으로 confirmatory case 수와 run 수를 정하고, blind held-out 사례를 고른다.
-6. Kite와 Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복한다.
+6. Arcane에서 같은 3-arm을 실행한다. Pocket ID는 필요하면 vanilla/route-index를 반복한다.
 
 ## 한계
 
