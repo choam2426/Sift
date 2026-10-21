@@ -52,21 +52,18 @@
 
 전체 후보와 상태는 `experiments/logic-ranker/e2e/heldout-candidates.json`에 있다.
 
-| 우선순위 | 사례 | router | oracle | route | 상태 |
-| ---: | --- | --- | --- | --- | --- |
-| 1 | Gotify password change | Gin | 검증됨 | 37, 대상 포함 | **eligible** |
-| 2 | OpenList sharing path | Gin | 검증됨 | 233, 대상 포함 | **eligible** |
-| 3 | Semaphore role slug | mux | 검증됨 | 329, 대상 포함 | **eligible** |
-| 4 | Pterodactyl JWT scope | Gin | custom 필요 | 35, 대상 포함 | route ready |
-| 5 | New API root token | Gin | custom 필요 | 320, 대상 포함 | route ready |
-| 6 | Cosmos bearer token | custom | custom 필요 | 155, 대상 포함 | route ready |
-| 7 | Cloudreve revoked share | Gin | fix commit 미확인 | 157, 대상 포함 | fix 필요 |
-| 8 | Authorizer OIDC link | Gin | fix commit 미확인 | 276, 대상 포함 | fix 필요 |
-| 9 | Arcane users:update | Echo | custom 필요 | 106, 대상 포함 | dev project, backup |
-| 10 | Nginx UI secure session | Gin | adapter 필요 | 231, 대상 누락 | blocked |
-| 11 | SeaweedFS JWT prefix | custom | upstream test | 107, 대상 누락 | blocked |
-| 12 | Woodpecker agent scope | Gin | fix commit 미확인 | 42, 대상 누락 | blocked |
-| 13 | rclone/Traefik/goshs/OliveTin | custom | upstream test | 0~5, 대상 누락 | blocked |
+| 사례 | router | oracle | route | 상태 |
+| --- | --- | --- | --- | --- |
+| OpenList sharing path | Gin | 검증됨 | 231, handler+truncation 통과 | **provisional** |
+| Semaphore role slug | mux | 검증됨 | 328, handler+truncation 통과 | **provisional** |
+| Nginx UI secure session | Gin | adapter 필요 | 228, target 누락 | blocked |
+| Arcane users:update | Echo | custom 필요 | 106, 통과 | dev project, exclude |
+| rclone/Traefik | custom | upstream test | 2/1, target 누락 | blocked |
+| Authorizer OIDC link | Gin | custom 필요 | 57, target truncated | fix 2026-08-07, gate fail |
+| Cloudreve revoked share | Gin | custom 필요 | 157, target 존재 | fix commit 미확인 |
+| Gotify/Pterodactyl/New API/SeaweedFS/Cosmos | — | 일부 검증 | — | fix가 cutoff 이전, exclude |
+
+OpenList와 Semaphore는 oracle+handler+truncation+cutoff를 통과했지만, oracle 함수가 bundle에 없어 coverage gate를 통과하지 못한다. `eligible`로 부르지 않는다.
 
 ## 결정과 구현
 
@@ -119,8 +116,8 @@ P1:
 
 | 사례 | 수정 커밋 날짜 | post-cutoff | 판정 |
 | --- | --- | --- | --- |
-| OpenList | 2026-07-10 | 예 | oracle+coverage 통과 |
-| Semaphore | 2026-07-05 | 예 | oracle+coverage 통과 |
+| OpenList | 2026-07-10 | 예 | oracle는 검증됐지만 oracle 함수가 bundle에 없음 → gate fail |
+| Semaphore | 2026-07-05 | 예 | oracle는 검증됐지만 `db.ValidateRole`이 bundle에 없음 → gate fail |
 | Nginx UI | 2026-07-03 | 예 | target route 누락 |
 | Arcane | 2026-07-29 | 예 | dev project |
 | rclone | 2026-07-08 | 예 | route table 없음 |
@@ -132,7 +129,7 @@ P1:
 | Cosmos | 2026-05-26 | **아니오** | 제외 |
 | Cloudreve/Authorizer/Woodpecker | 미확인 | 미확인 | 보류 |
 
-현재 **post-cutoff + oracle + route coverage**를 모두 만족하는 사례는 OpenList와 Semaphore 둘뿐이다. 8개 confirmatory 세트를 이 pool에서 만들 수 없다.
+현재 **post-cutoff + oracle + oracle-function coverage**를 모두 만족하는 사례는 **0개**다. OpenList와 Semaphore는 oracle은 통과했지만, route bundle이 oracle이 호출하는 함수(`internal/op.GetSharingUnwrapPath`, `db.ValidateRole`)를 포함하지 않는다. 8개 confirmatory 세트는 물론 2개짜리 confirmatory도 이 extractor로는 정당화되지 않는다.
 
 ## 결정
 
@@ -147,10 +144,11 @@ P1:
 
 ## 아직 남은 일
 
-- P0 수정: middleware, 질문 대칭, publication date, coverage gate, semantic review, budget ledger
-- golden extractor fixture와 runtime route recall 검사
-- Pterodactyl·New API·Cosmos의 behavior oracle
-- Cloudreve·Authorizer의 fix commit 확인
+- oracle 함수를 포함하는 decision-path 추출(깊은 call graph 또는 fix-independent unit index)
+- P0 수정 후 Mythos/Astra 재리뷰와 finding-level semantic gate 보완
+- Authorizer target truncation, Cloudreve fix commit 확인
+- runtime route recall 검사와 exact handler identity fixture
+- 8개 post-cutoff 사례 확보
 - 8개 eligible 사례 확정 후 pre-registration 동결
 
 ## 확정 전 pre-registration
@@ -169,13 +167,13 @@ P1:
 - **보조 지표**: reproduced rate, turns, wall time, Jev 요청·토큰·비용, audit flags.
 - **판정**: 사례별 paired 차이의 중앙값과 bootstrap 95% CI. CI가 0을 포함하면 효과를 주장하지 않는다.
 - **재시도**: primary에서는 테스트 수정·재제출을 허용하지 않는다. rejected는 실패로 센다.
-- **감사**: direct docker/network 호출은 그 run을 무효화하고 재실행한다. workspace 내부 `../`는 수동 검토한다.
+- **감사**: direct docker/network 호출은 그 run을 무효화해 censored로 기록한다. 자동 재실행으로 대체하지 않는다. 인프라 장애만 사전에 정한 1회 재실행을 허용하고, 모든 시도를 남긴다. workspace 내부 `../`는 수동 검토한다.
 - **오염**: `.git`·advisory·fix 이력을 제거하고 네트워크를 차단한다. post-cutoff만으로 오염이 없다고 주장하지 않는다.
 
 ## 실행 전 gate
 
 1. 후보의 취약·수정 소스가 오프라인에서 빌드된다.
-2. oracle이 취약판에서 `--- FAIL:`로 실패하고 수정판·decoy에서 통과한다.
+2. oracle이 취약판에서 `--- FAIL:`로 실패하고 수정판에서 통과하며, decoy(무관한 변경)에서는 같은 실패가 재현된다.
 3. route bundle이 대상 route를 포함한다. 포함하지 않으면 extractor를 고치거나 사례를 제외한다.
 4. 세 조건의 비용 회계와 Jev 비용이 기록된다.
 5. 8개 미만이면 backup 순서대로 채우되, 결과를 본 뒤 사례를 바꾸지 않는다.

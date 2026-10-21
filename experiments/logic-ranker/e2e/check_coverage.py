@@ -37,26 +37,32 @@ def main():
     target_ids = set(case.get('target_route_ids', []))
     target_handlers = case.get('target_handlers', [])
     fix_functions = set(case.get('fix_functions', []))
+    oracle_functions = set(case.get('oracle_functions', []))
     matches = []
     for r in rows:
         if r['ID'] not in target_ids:
             continue
-        if target_handlers and not any(h in r['Handler'] for h in target_handlers):
+        if target_handlers and r['Handler'] not in target_handlers:
             continue
         matches.append(r)
     problems = []
     if not matches:
         problems.append('target route/handler not found')
-    if any(r.get('Truncated') for r in matches):
-        problems.append('target route is truncated')
-    if fix_functions and not any(fix_functions & set(r.get('Members') or []) for r in matches):
-        problems.append('target Members do not include a fix-touched function')
+    if any(('Truncated' not in r) or r['Truncated'] for r in matches):
+        problems.append('target route is truncated or missing Truncated metadata')
+    if not fix_functions:
+        problems.append('no fix-touched function metadata')
+    elif not any((fix_functions & set(r.get('Members') or [])) and any(f in r.get('Text','') for f in fix_functions) for r in matches):
+        problems.append('target Members/Text do not include a fix-touched function')
+    if oracle_functions and not any((oracle_functions & set(r.get('Members') or [])) and any(f in r.get('Text','') for f in oracle_functions) for r in matches):
+        problems.append('target Members/Text do not include the oracle function')
     result = {
         'case': args.case,
         'routes': str(path),
         'target_ids': sorted(target_ids),
         'target_handlers': target_handlers,
         'fix_functions': sorted(fix_functions),
+        'oracle_functions': sorted(oracle_functions),
         'matches': [
             {'ID': r['ID'], 'Handler': r['Handler'], 'Truncated': r.get('Truncated'),
              'Chars': r.get('Chars'), 'members': len(r.get('Members') or [])}

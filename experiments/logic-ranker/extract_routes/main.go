@@ -617,14 +617,14 @@ func routeFromCall(call *ast.CallExpr, pkg string, src []byte, groups map[string
 		parts = append(parts, "Group context:\n"+gsrc)
 	}
 	if len(ids) > 0 {
-		addFunc(&parts, &r.Members, ids[0], 1)
+		addFunc(&parts, &r.Members, ids[0], 2)
 	} else {
 		parts = append(parts, "Handler:\n"+sourceOf(handler, src))
 	}
 	for _, m := range mw {
 		parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
 		for _, id := range resolveWithVars(m, pkg, vars) {
-			addFunc(&parts, &r.Members, id, 1)
+			addFunc(&parts, &r.Members, id, 2)
 		}
 	}
 	text := strings.Join(parts, "\n\n")

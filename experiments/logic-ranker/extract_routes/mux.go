@@ -194,14 +194,14 @@ func muxRoutesFromCall(call *ast.CallExpr, rel string, src []byte, groups map[st
 			parts = append(parts, "Group context:\n"+g.source)
 		}
 		if len(ids) > 0 {
-			addFunc(&parts, &r.Members, ids[0], 1)
+			addFunc(&parts, &r.Members, ids[0], 2)
 		} else {
 			parts = append(parts, "Handler:\n"+sourceOf(info.handler, src))
 		}
 		for _, m := range g.mw {
 			parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
 			for _, id := range resolveWithVars(m, rel, vars) {
-				addFunc(&parts, &r.Members, id, 1)
+				addFunc(&parts, &r.Members, id, 2)
 			}
 		}
 		text := strings.Join(parts, "\n\n")

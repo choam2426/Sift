@@ -31,10 +31,10 @@
       "published": "2026-07-24",
       "review_status": "coverage-gate-insufficient",
       "target_route_ids": [
-        "route:POST /api/share/create"
+        "route:GET /api/share/get"
       ],
       "target_handlers": [
-        "server/handles.CreateSharing"
+        "server/handles.GetSharing"
       ],
       "fix_functions": [
         "server/handles.CreateSharing",
@@ -42,7 +42,10 @@
       ],
       "fix_commit_date": "2026-07-10T12:24:40+08:00",
       "post_cutoff": true,
-      "coverage_gate": "passed"
+      "coverage_gate": "failed: oracle function missing from target bundle",
+      "oracle_functions": [
+        "internal/op.GetSharingUnwrapPath"
+      ]
     },
     {
       "id": "gotify-password-change",
@@ -81,7 +84,11 @@
       "fix_commit_date": "2026-04-19T19:24:18+02:00",
       "post_cutoff": false,
       "exclusion_reason": "fix commit predates model cutoff",
-      "coverage_gate": "passed"
+      "coverage_gate": "passed, but fix commit predates cutoff",
+      "oracle_functions": [
+        "api.UserAPI.ChangePassword",
+        "auth.Auth.RequireClient"
+      ]
     },
     {
       "id": "semaphore-role-slug",
@@ -119,7 +126,10 @@
       ],
       "fix_commit_date": "2026-07-05T23:25:01+05:00",
       "post_cutoff": true,
-      "coverage_gate": "passed"
+      "coverage_gate": "failed: oracle function missing from target bundle",
+      "oracle_functions": [
+        "db.ValidateRole"
+      ]
     },
     {
       "id": "pterodactyl-jwt-scope",
@@ -294,7 +304,7 @@
       "project": "Authorizer",
       "repo": "https://github.com/authorizerdev/authorizer",
       "ghsa": "GHSA-29rf-f4vv-pvq6",
-      "fix_commit": null,
+      "fix_commit": "66fe488fd2a4e7acf1e517334344d5e8f3ddd296",
       "vuln_commit": null,
       "router": "gin",
       "bug_class": "identity-linking",
@@ -313,9 +323,9 @@
       "note": "fix commit not listed in advisory",
       "published": "2026-08-14",
       "review_status": "coverage-gate-insufficient",
-      "fix_commit_date": null,
-      "post_cutoff": null,
-      "coverage_gate": "blocked: fix commit unknown"
+      "fix_commit_date": "2026-08-07T09:01:10+05:30",
+      "post_cutoff": true,
+      "coverage_gate": "blocked: target truncated"
     },
     {
       "id": "woodpecker-agent-scope",
