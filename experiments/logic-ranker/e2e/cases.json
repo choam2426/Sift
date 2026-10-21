@@ -60,7 +60,7 @@
     "image": "golang:1.27",
     "mod_cache": "sift-go127-mod-cache",
     "test_pkg": "./internal/auth",
-    "test_file_dir": "internal/auth",
+    "test_file_dir": "backend/internal/auth",
     "routes": "~/sift-runs/logic-e2e/routes/arcane.jsonl",
     "task_scope": "manager authentication and admin-required routes",
     "question": "Does this route apply every configured authorization gate before the handler or side effect runs?",
