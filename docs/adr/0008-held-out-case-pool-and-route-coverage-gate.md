@@ -1,7 +1,7 @@
 # ADR 0008: held-out 사례는 oracle과 route coverage를 모두 통과해야 한다
 
 - 날짜: 2026-10-21
-- 상태: **REVISE, confirmatory 중단**. A 구현(commit `423d5b1`)을 Mythos 5.1과 GPT-6 Astra가 리뷰했고 둘 다 REVISE를 냈다. P0 수정 전에는 8개 held-out 실행을 시작하지 않는다.
+- 상태: **REVISE, P0 수정 완료, 재리뷰 대기, 사례 pool 부족**. Mythos 5.1과 GPT-6 Astra가 REVISE를 냈고, P0 수정과 post-cutoff filter를 반영했다. 8개 confirmatory 세트는 아직 확정하지 못했다.
 - 관련: [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md)
 
 ## 맥락
@@ -102,12 +102,48 @@ P1:
 
 - root mux/net/http router 누락, helper 재귀·빈 prefix·인자 위치, `joinRoute`의 already-prefixed shortcut, package alias 해석, silent drop, 진짜 decoy 부재, panic 처리, oracle-informed `task_scope`, extractor를 target에 맞춰 반복 수정한 점, 3회 반복의 power 부족, audit 재실행의 optional stopping.
 
+## P0 수정 (2026-10-21)
+
+- `Use(...)`의 첫 middleware를 버리던 `x.Args[1:]`를 `x.Args`로 고쳤다.
+- mux/Gin/Echo root router를 seed하고, Echo의 `(path, handler, middleware...)` 순서를 구분한다.
+- nested group path를 항상 결합하고, handler를 middleware보다 먼저 넣어 80k truncation이 handler를 자르지 않게 했다.
+- handler/middleware callee depth를 1로 줄여 target route가 truncate되지 않게 했다.
+- `golden_test.py`에 Gin/Echo/mux/root/helper/middleware fixture를 추가했다.
+- `check_coverage.py`는 target route/handler, `Truncated=false`, `Members ∩ fix_functions`를 검사한다.
+- `e2e.py`는 모든 arm에 같은 질문을 주고, Jev reserve를 포함한 결합 상한, audit 무효화, 실제 decoy, panic reject, per-test 평가, semantic adjudicate를 추가했다.
+- 단위 테스트: `test_e2e.py` 6개, `golden_test.py` 4개 통과.
+
+## Post-cutoff filter 결과
+
+수정 커밋 날짜를 확인하자 후보 pool이 크게 줄었다. 모델 기준일은 2026-06-30이다.
+
+| 사례 | 수정 커밋 날짜 | post-cutoff | 판정 |
+| --- | --- | --- | --- |
+| OpenList | 2026-07-10 | 예 | oracle+coverage 통과 |
+| Semaphore | 2026-07-05 | 예 | oracle+coverage 통과 |
+| Nginx UI | 2026-07-03 | 예 | target route 누락 |
+| Arcane | 2026-07-29 | 예 | dev project |
+| rclone | 2026-07-08 | 예 | route table 없음 |
+| Traefik | 2026-08-28 | 예 | route table 없음 |
+| Gotify | 2026-04-19 | **아니오** | 제외 |
+| Pterodactyl | 2026-05-23 | **아니오** | 제외 |
+| New API | 2026-05-19 | **아니오** | 제외 |
+| SeaweedFS | 2026-05-12 | **아니오** | 제외 |
+| Cosmos | 2026-05-26 | **아니오** | 제외 |
+| Cloudreve/Authorizer/Woodpecker | 미확인 | 미확인 | 보류 |
+
+현재 **post-cutoff + oracle + route coverage**를 모두 만족하는 사례는 OpenList와 Semaphore 둘뿐이다. 8개 confirmatory 세트를 이 pool에서 만들 수 없다.
+
 ## 결정
 
-- Extractor는 reviewed commit `423d5b1`에 동결한다. 추가 target-fit 수정은 하지 않는다.
-- P0를 별도 변경으로 고치고, golden fixture와 target bundle의 handler identity/truncation 검사를 추가한다.
-- P0 수정 후 같은 두 리뷰어에게 재리뷰를 받는다. 그 전에는 confirmatory를 실행하지 않는다.
-- `eligible=true`는 oracle, handler identity, truncation, publication cutoff를 모두 통과한 뒤에만 쓴다.
+- Extractor는 P0 수정 후 재리뷰 전까지 동결한다.
+- `eligible=true`는 oracle, handler identity, truncation, publication cutoff, 재리뷰를 모두 통과한 뒤에만 쓴다.
+- 8개 세트가 없으므로 confirmatory를 시작하지 않는다.
+- 다음 선택지:
+  - **A. 후보 pool 확장**: post-cutoff 수정 커밋과 Gin/Echo/mux route를 가진 Go authz 사례를 더 찾는다.
+  - **B. 범위 축소**: OpenList·Semaphore 중심의 2~3 사례 파일럿으로만 보고하고 confirmatory 주장을 하지 않는다.
+  - **C. intervention 변경**: custom router 사례에는 route index 대신 function-unit index를 쓰는 별도 실험을 설계한다. 기존 3-arm과 직접 비교하지 않는다.
+- 권고: **A를 먼저** 하고, 8개가 계속 안 되면 B로 범위를 줄이거나 C를 별도 실험으로 분리한다.
 
 ## 아직 남은 일
 

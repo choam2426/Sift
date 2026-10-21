@@ -122,8 +122,10 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - 후보 20개를 `heldout-candidates.json`에 기록했고, extractor v7으로 전체 후보를 추출했다. 경로 수는 `heldout-route-coverage.json`에 있다.
 - oracle 검증: OpenList, Gotify, Semaphore. 셋 다 취약판 실패·수정판 통과를 확인했다.
 - route coverage: Gotify 37, OpenList 233, Semaphore 329, Pterodactyl 35, New API 320, Cosmos 155, Arcane 106. 단, 이는 **path-string presence**일 뿐 handler identity·truncation 검사가 아니다.
-- Mythos 5.1과 GPT-6 Astra 리뷰가 둘 다 **REVISE**를 냈다. middleware 누락, Jev 질문 비대칭, coverage gate 미흡, publication date 누락, budget/semantic-review 문제가 P0다.
-- 따라서 현재 `eligible=true`인 사례는 없다. P0 수정과 재리뷰 전에는 confirmatory를 실행하지 않는다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
+- Mythos 5.1과 GPT-6 Astra 리뷰가 둘 다 **REVISE**를 냈다. middleware 누락, Jev 질문 비대칭, coverage gate 미흡, publication date 누락, budget/semantic-review 문제가 P0였다.
+- P0 수정: `Use` middleware, root router, Echo handler 순서, path join, handler-before-middleware, golden fixture, coverage gate, 질문 대칭, 결합 상한, audit 무효화, 실제 decoy, panic reject, semantic adjudicate.
+- post-cutoff filter 결과 oracle+route를 모두 만족하는 사례는 OpenList와 Semaphore 둘뿐이다. Gotify·Pterodactyl·New API·SeaweedFS·Cosmos는 수정 커밋이 기준일 이전이라 제외했다.
+- 따라서 8개 confirmatory 세트는 아직 없다. `eligible=true`인 사례는 없고, 재리뷰와 pool 확장 전에는 실행하지 않는다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
 
 ## 다음
 

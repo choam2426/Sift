@@ -4,32 +4,36 @@
   "cases": [
     {
       "id": "gotify-password-change",
-      "routes": 37,
+      "routes": 36,
       "target": "POST current/user/password",
       "target_present": true,
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "openlist-sharing-path",
-      "routes": 233,
+      "routes": 231,
       "target": "POST /share/create",
       "target_present": true,
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "semaphore-role-slug",
-      "routes": 329,
+      "routes": 328,
       "target": "GET/POST /api/roles",
       "target_present": true,
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "pterodactyl-jwt-scope",
-      "routes": 35,
+      "routes": 29,
       "target": "POST /upload/file; GET /download/file",
       "target_present": true,
       "oracle": "not-built",
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "new-api-root-token",
@@ -37,7 +41,8 @@
       "target": "GET /api/user/",
       "target_present": true,
       "oracle": "not-built",
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "cosmos-bearer-token",
@@ -45,7 +50,8 @@
       "target": "/cosmos/api/constellation/public-devices",
       "target_present": true,
       "oracle": "not-built",
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "arcane-user-update-hierarchy",
@@ -54,7 +60,8 @@
       "target_present": true,
       "oracle": "not-built",
       "note": "development project",
-      "target_path_present": true
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "cloudreve-revoked-share",
@@ -62,93 +69,106 @@
       "target": "share/:id",
       "target_present": true,
       "note": "fix commit not identified",
-      "target_path_present": false
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "authorizer-oidc-email-link",
-      "routes": 276,
+      "routes": 57,
       "target": "GET/POST /oauth_callback/:oauth_provider",
       "target_present": true,
       "note": "fix commit not identified",
-      "target_path_present": false
+      "target_path_present": true,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "nginx-ui-secure-session",
-      "routes": 231,
+      "routes": 228,
       "target": "/api/users/:id",
       "target_present": false,
       "note": "cosy generic router not extracted",
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "seaweedfs-jwt-prefix",
-      "routes": 107,
+      "routes": 117,
       "target": "filer JWT route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "woodpecker-agent-scope",
-      "routes": 42,
+      "routes": 37,
       "target": "agent route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "goshs-acl-bulk",
       "routes": 5,
       "target": "bulk download route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "olivetin-logs",
-      "routes": 3,
+      "routes": 0,
       "target": "StartActionAndWait",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "rclone-restic-path",
-      "routes": 4,
+      "routes": 2,
       "target": "restic repo route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "traefik-request-target",
-      "routes": 0,
+      "routes": 1,
       "target": "request-target route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "echo-encoded-slash",
       "routes": 0,
       "target": "static route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "kin-openapi-security",
       "routes": 0,
       "target": "security requirement operation",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "sftpgo-pattern-filter",
       "routes": 0,
       "target": "copy route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     },
     {
       "id": "goploy-idor",
-      "routes": 3,
+      "routes": 0,
       "target": "project route",
       "target_present": false,
-      "target_path_present": false
+      "target_path_present": false,
+      "target_gate": "path only; handler/truncation gate must be run separately"
     }
   ],
   "gate": "path-only; handler identity and truncation not yet checked"

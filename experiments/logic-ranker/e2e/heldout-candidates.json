@@ -29,7 +29,20 @@
       },
       "eligible": false,
       "published": "2026-07-24",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:POST /api/share/create"
+      ],
+      "target_handlers": [
+        "server/handles.CreateSharing"
+      ],
+      "fix_functions": [
+        "server/handles.CreateSharing",
+        "internal/op.GetSharingUnwrapPath"
+      ],
+      "fix_commit_date": "2026-07-10T12:24:40+08:00",
+      "post_cutoff": true,
+      "coverage_gate": "passed"
     },
     {
       "id": "gotify-password-change",
@@ -54,7 +67,21 @@
       },
       "eligible": false,
       "published": "2026-10-15",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:POST current/user/password"
+      ],
+      "target_handlers": [
+        "api.UserAPI.ChangePassword"
+      ],
+      "fix_functions": [
+        "api.UserAPI.ChangePassword",
+        "auth.RequireElevatedClient"
+      ],
+      "fix_commit_date": "2026-04-19T19:24:18+02:00",
+      "post_cutoff": false,
+      "exclusion_reason": "fix commit predates model cutoff",
+      "coverage_gate": "passed"
     },
     {
       "id": "semaphore-role-slug",
@@ -79,7 +106,20 @@
       },
       "eligible": false,
       "published": "2026-09-03",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:POST /api/roles"
+      ],
+      "target_handlers": [
+        "pro/api.RolesController.AddRole"
+      ],
+      "fix_functions": [
+        "pro/api.RolesController.AddRole",
+        "db.ValidateRole"
+      ],
+      "fix_commit_date": "2026-07-05T23:25:01+05:00",
+      "post_cutoff": true,
+      "coverage_gate": "passed"
     },
     {
       "id": "pterodactyl-jwt-scope",
@@ -104,7 +144,20 @@
       },
       "eligible": false,
       "published": "2026-07-28",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:POST /upload/file"
+      ],
+      "target_handlers": [
+        "router.postServerUploadFiles"
+      ],
+      "fix_functions": [
+        "router.postServerUploadFiles"
+      ],
+      "fix_commit_date": "2026-05-23T11:00:27-07:00",
+      "post_cutoff": false,
+      "exclusion_reason": "fix commit predates model cutoff",
+      "coverage_gate": "passed"
     },
     {
       "id": "nginx-ui-secure-session",
@@ -129,7 +182,10 @@
       },
       "eligible": false,
       "published": "2026-10-15",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": "2026-07-03T21:12:14+08:00",
+      "post_cutoff": true,
+      "coverage_gate": "blocked: target route missing"
     },
     {
       "id": "new-api-root-token",
@@ -154,7 +210,18 @@
       },
       "eligible": false,
       "published": "2026-08-17",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:GET /api/user/"
+      ],
+      "target_handlers": [
+        "controller.GetAllUsers"
+      ],
+      "fix_functions": [],
+      "fix_commit_date": "2026-05-19T12:11:24+08:00",
+      "post_cutoff": false,
+      "exclusion_reason": "fix commit predates model cutoff",
+      "coverage_gate": "path+handler passed; oracle pending"
     },
     {
       "id": "arcane-user-update-hierarchy",
@@ -179,7 +246,20 @@
       "eligible": false,
       "note": "same project as a development case; only use as backup",
       "published": "2026-10-16",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:EXPR /users/{userId}"
+      ],
+      "target_handlers": [
+        "backend/api/handlers.UserHandler.UpdateUser"
+      ],
+      "fix_functions": [
+        "backend/api/handlers.UserHandler.UpdateUser",
+        "backend/internal/services.UserService.UpdateUser"
+      ],
+      "fix_commit_date": "2026-07-29T12:18:13-05:00",
+      "post_cutoff": true,
+      "coverage_gate": "passed"
     },
     {
       "id": "cloudreve-revoked-share",
@@ -204,7 +284,10 @@
       "eligible": false,
       "note": "fix commit not listed in advisory",
       "published": "2026-08-24",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": null,
+      "post_cutoff": null,
+      "coverage_gate": "blocked: fix commit unknown"
     },
     {
       "id": "authorizer-oidc-email-link",
@@ -229,7 +312,10 @@
       "eligible": false,
       "note": "fix commit not listed in advisory",
       "published": "2026-08-14",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": null,
+      "post_cutoff": null,
+      "coverage_gate": "blocked: fix commit unknown"
     },
     {
       "id": "woodpecker-agent-scope",
@@ -254,7 +340,10 @@
       "eligible": false,
       "note": "fix commit not listed in advisory",
       "published": "2026-07-14",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": null,
+      "post_cutoff": null,
+      "coverage_gate": "blocked: target route missing"
     },
     {
       "id": "rclone-restic-path",
@@ -278,7 +367,10 @@
       },
       "eligible": false,
       "published": "2026-08-05",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": "2026-07-08T16:51:49+01:00",
+      "post_cutoff": true,
+      "coverage_gate": "blocked: no route table"
     },
     {
       "id": "traefik-request-target",
@@ -302,7 +394,10 @@
       },
       "eligible": false,
       "published": "2026-09-10",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": "2026-08-28T17:16:05+02:00",
+      "post_cutoff": true,
+      "coverage_gate": "blocked: no route table"
     },
     {
       "id": "seaweedfs-jwt-prefix",
@@ -327,7 +422,11 @@
       },
       "eligible": false,
       "published": "2026-09-02",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "fix_commit_date": "2026-05-12T10:10:48-07:00",
+      "post_cutoff": false,
+      "exclusion_reason": "fix commit predates model cutoff",
+      "coverage_gate": "blocked: target route missing"
     },
     {
       "id": "cosmos-bearer-token",
@@ -352,7 +451,20 @@
       },
       "eligible": false,
       "published": "2026-07-28",
-      "review_status": "coverage-gate-insufficient"
+      "review_status": "coverage-gate-insufficient",
+      "target_route_ids": [
+        "route:ANY /cosmos/api/constellation/public-devices"
+      ],
+      "target_handlers": [
+        "src/constellation.DevicePublicList"
+      ],
+      "fix_functions": [
+        "src/constellation.DevicePublicList"
+      ],
+      "fix_commit_date": "2026-05-26T12:59:20+01:00",
+      "post_cutoff": false,
+      "exclusion_reason": "fix commit predates model cutoff",
+      "coverage_gate": "path+handler passed; oracle pending"
     }
   ],
   "review": {

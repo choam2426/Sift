@@ -29,8 +29,8 @@ type Route struct {
 	Helper                    bool   `json:"-"`
 }
 type groupCtx struct {
-	path, source string
-	mw           []ast.Expr
+	path, source, kind string
+	mw                 []ast.Expr
 }
 
 var fset *token.FileSet
@@ -224,7 +224,7 @@ func main() {
 					if isGroupType(tn) {
 						hasGroupParam = true
 						for _, n := range f.Names {
-							groups[n.Name] = groupCtx{}
+							groups[n.Name] = groupCtx{kind: kindFromType(tn)}
 						}
 					}
 				}
@@ -246,10 +246,19 @@ func main() {
 							if call, ok := x.Rhs[0].(*ast.CallExpr); ok {
 								if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 									if sel.Sel.Name == "Group" {
-										groups[id.Name] = groupFromCall(call, groups, svars, src)
+										groups[id.Name] = groupFromCall(call, groups, svars, vars, src)
 									}
 									if g, ok := muxGroupFromCall(call, groups, svars, src); ok {
 										groups[id.Name] = g
+									}
+									switch sel.Sel.Name {
+									case "NewRouter":
+										groups[id.Name] = groupCtx{kind: "mux"}
+									case "New", "Default":
+										base := exprString(sel.X)
+										if base == "gin" || base == "echo" {
+											groups[id.Name] = groupCtx{kind: base}
+										}
 									}
 								}
 							}
@@ -280,7 +289,7 @@ func main() {
 					if sel, ok := x.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Use" {
 						if id, ok := sel.X.(*ast.Ident); ok {
 							g := groups[id.Name]
-							g.mw = append(g.mw, x.Args[1:]...)
+							g.mw = append(g.mw, x.Args...)
 							g.source = sourceOf(x, src)
 							groups[id.Name] = g
 						}
@@ -322,7 +331,7 @@ func main() {
 				}
 				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 					if sel.Sel.Name == "Group" {
-						groups[id.Name] = groupFromCall(call, groups, svars, src)
+						groups[id.Name] = groupFromCall(call, groups, svars, nil, src)
 					}
 					if g, ok := muxGroupFromCall(call, groups, svars, src); ok {
 						groups[id.Name] = g
@@ -532,16 +541,26 @@ func stringArg(e ast.Expr) string {
 	}
 	return ""
 }
-func groupFromCall(call *ast.CallExpr, groups map[string]groupCtx, svars map[string]string, src []byte) groupCtx {
+func groupFromCall(call *ast.CallExpr, groups map[string]groupCtx, svars map[string]string, vars map[string]string, src []byte) groupCtx {
 	g := groupCtx{source: sourceOf(call, src)}
-	parentPath := ""
+	parentPath, parentKind := "", ""
 	if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 		if id, ok := sel.X.(*ast.Ident); ok {
 			if pg, ok := groups[id.Name]; ok {
 				parentPath = pg.path
+				parentKind = pg.kind
 				g.mw = append(g.mw, pg.mw...)
 			}
+			if vars != nil {
+				g.kind = kindFromType(vars[id.Name])
+			}
 		}
+	}
+	if parentKind != "" {
+		g.kind = parentKind
+	}
+	if g.kind == "" {
+		g.kind = "gin"
 	}
 	if len(call.Args) > 0 {
 		g.path = joinRoute(parentPath, stringValue(call.Args[0], svars))
@@ -556,6 +575,14 @@ func routeFromCall(call *ast.CallExpr, pkg string, src []byte, groups map[string
 	if !ok || len(call.Args) < 2 {
 		return Route{}, false
 	}
+	id, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return Route{}, false
+	}
+	g, ok := groups[id.Name]
+	if !ok {
+		return Route{}, false
+	}
 	method := normalizeMethod(sel.Sel.Name)
 	if method == "HANDLE" {
 		method = "ANY"
@@ -566,16 +593,15 @@ func routeFromCall(call *ast.CallExpr, pkg string, src []byte, groups map[string
 	}
 	handler := call.Args[len(call.Args)-1]
 	var mw []ast.Expr
-	mw = append(mw, call.Args[1:len(call.Args)-1]...)
-	gpath := ""
-	gsrc := ""
-	if id, ok := sel.X.(*ast.Ident); ok {
-		if g, ok := groups[id.Name]; ok {
-			gpath = g.path
-			gsrc = g.source
-			mw = append(mw, g.mw...)
-		}
+	if g.kind == "echo" {
+		handler = call.Args[1]
+		mw = append(mw, call.Args[2:]...)
+	} else {
+		mw = append(mw, call.Args[1:len(call.Args)-1]...)
 	}
+	gpath := g.path
+	gsrc := g.source
+	mw = append(mw, g.mw...)
 	full := path
 	if gpath != "" {
 		full = strings.TrimRight(gpath, "/") + "/" + strings.TrimLeft(path, "/")
@@ -590,23 +616,15 @@ func routeFromCall(call *ast.CallExpr, pkg string, src []byte, groups map[string
 	if gsrc != "" {
 		parts = append(parts, "Group context:\n"+gsrc)
 	}
-	for _, m := range mw {
-		parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
-		for _, id := range resolveWithVars(m, pkg, vars) {
-			addFunc(&parts, &r.Members, id, 2)
-		}
-	}
 	if len(ids) > 0 {
-		addFunc(&parts, &r.Members, ids[0], 2)
+		addFunc(&parts, &r.Members, ids[0], 1)
 	} else {
 		parts = append(parts, "Handler:\n"+sourceOf(handler, src))
 	}
-	// field-resolved calls in handler
-	for _, id := range ids {
-		if fn := funcs[id]; fn != nil {
-			for _, fid := range fieldCalls(fn.Source, pkg) {
-				addFunc(&parts, &r.Members, fid, 2)
-			}
+	for _, m := range mw {
+		parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
+		for _, id := range resolveWithVars(m, pkg, vars) {
+			addFunc(&parts, &r.Members, id, 1)
 		}
 	}
 	text := strings.Join(parts, "\n\n")

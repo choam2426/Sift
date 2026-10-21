@@ -81,6 +81,10 @@ func stringValue(e ast.Expr, svars map[string]string) string {
 		}
 	case *ast.ParenExpr:
 		return stringValue(x.X, svars)
+	case *ast.SelectorExpr:
+		if strings.HasPrefix(x.Sel.Name, "Method") {
+			return strings.ToUpper(strings.TrimPrefix(x.Sel.Name, "Method"))
+		}
 	}
 	return ""
 }
@@ -119,10 +123,19 @@ func joinRoute(prefix, p string) string {
 	if prefix == "" {
 		return p
 	}
-	if p == prefix || strings.HasPrefix(p, strings.TrimRight(prefix, "/")+"/") {
-		return p
-	}
 	return strings.TrimRight(prefix, "/") + "/" + strings.TrimLeft(p, "/")
+}
+
+func kindFromType(name string) string {
+	switch name {
+	case "RouterGroup", "Engine":
+		return "gin"
+	case "Group", "Echo":
+		return "echo"
+	case "Router", "IRouter":
+		return "mux"
+	}
+	return ""
 }
 
 func muxGroupFromCall(call *ast.CallExpr, groups map[string]groupCtx, svars map[string]string, src []byte) (groupCtx, bool) {
@@ -135,9 +148,14 @@ func muxGroupFromCall(call *ast.CallExpr, groups map[string]groupCtx, svars map[
 		return groupCtx{}, false
 	}
 	parent := groups[base]
+	kind := parent.kind
+	if kind == "" {
+		kind = "mux"
+	}
 	return groupCtx{
 		path:   joinRoute(parent.path, info.path),
 		source: sourceOf(call, src),
+		kind:   kind,
 		mw:     parent.mw,
 	}, true
 }
@@ -175,22 +193,15 @@ func muxRoutesFromCall(call *ast.CallExpr, rel string, src []byte, groups map[st
 		if g.source != "" {
 			parts = append(parts, "Group context:\n"+g.source)
 		}
-		for _, m := range g.mw {
-			parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
-			for _, id := range resolveWithVars(m, rel, vars) {
-				addFunc(&parts, &r.Members, id, 2)
-			}
-		}
 		if len(ids) > 0 {
-			addFunc(&parts, &r.Members, ids[0], 2)
+			addFunc(&parts, &r.Members, ids[0], 1)
 		} else {
 			parts = append(parts, "Handler:\n"+sourceOf(info.handler, src))
 		}
-		for _, id := range ids {
-			if fn := funcs[id]; fn != nil {
-				for _, fid := range fieldCalls(fn.Source, rel) {
-					addFunc(&parts, &r.Members, fid, 2)
-				}
+		for _, m := range g.mw {
+			parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
+			for _, id := range resolveWithVars(m, rel, vars) {
+				addFunc(&parts, &r.Members, id, 1)
 			}
 		}
 		text := strings.Join(parts, "\n\n")
@@ -209,7 +220,7 @@ func helperPrefix(call *ast.CallExpr, groups map[string]groupCtx, svars map[stri
 	for _, arg := range call.Args {
 		if c, ok := arg.(*ast.CallExpr); ok {
 			if sel, ok := c.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Group" {
-				return groupFromCall(c, groups, svars, src).path
+				return groupFromCall(c, groups, svars, nil, src).path
 			}
 		}
 		if id, ok := arg.(*ast.Ident); ok {

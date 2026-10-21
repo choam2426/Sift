@@ -65,15 +65,20 @@ esac
 def task(case, arm):
     routes = ''
     if arm in ('route-index', 'jev'):
-        routes = '''
+        routes = """
 A route index is provided at `routes.jsonl`. It contains decision-path units (route registration, middleware, handler, related functions), ordered by ID. Use it as an investigation aid; it is not a list of confirmed bugs.
-'''
+"""
     jev = ''
     if arm == 'jev':
-        jev = '''
+        jev = """
 You also have a Jev ranker. Read JEV.md. Jev scores units; it does not verify them.
-'''
-    return f'''# Task
+"""
+    question = f"""
+Pre-registered question for this case (the same text is given to every arm):
+
+> {case['question']}
+"""
+    return f"""# Task
 
 Find a security-relevant logic bug in **{case['task_scope']}** in this Go project.
 
@@ -86,7 +91,7 @@ Deliver findings under `findings/<short-name>/`:
 - `test.go`: a Go test in the package used by `{case['test_pkg']}`. It must fail on the vulnerable source and pass on the fixed source. It will be copied into pristine source trees for evaluation.
 
 Rules: no network, no external reports. Keep scratch files under `scratch/`.
-{routes}{jev}'''
+{question}{routes}{jev}"""
 
 def routes_guide(case):
     return f'''# Route index
@@ -199,16 +204,28 @@ def run_go_test(root, case, extra_test=None):
                '-e', 'GOCACHE=/go/cache', case['image'], 'go', 'test', case['test_pkg'], '-run', run_re, '-count=1')
     out = (p.stdout + p.stderr)
     compile_error = bool(re.search(r'(?m)^# |\[build failed\]', out))
-    failed = '--- FAIL:' in out
-    return {'exit': p.returncode, 'compile_error': compile_error, 'failed': failed,
-            'passed': p.returncode == 0 and not failed, 'tail': out[-3000:]}
+    panic = bool(re.search(r'(?m)^panic: ', out))
+    failed = '--- FAIL:' in out and not panic
+    return {'exit': p.returncode, 'compile_error': compile_error, 'panic': panic,
+            'failed': failed, 'passed': p.returncode == 0 and not failed and not panic,
+            'tail': out[-3000:]}
 
-def evaluate(ws, case):
-    tests = sorted((ws / 'agent' / 'findings').glob('*/test.go'))
-    if not tests:
-        return {'verdict': 'no-test', 'tests': []}
-    base = ws / 'control' / 'eval'
-    if base.exists(): shutil.rmtree(base)
+def add_decoy(root, case):
+    target = root / case['test_file_dir']
+    target.mkdir(parents=True, exist_ok=True)
+    go_files = sorted(p for p in target.glob('*.go') if not p.name.endswith('_test.go'))
+    if go_files:
+        p = go_files[0]
+        p.write_text(p.read_text(errors='replace') + "\n\nvar _ = 0 // unrelated decoy change\n")
+    else:
+        pkg = case['test_pkg'].rstrip('/').split('/')[-1]
+        (target / 'zz_decoy.go').write_text(f"package {pkg}\n\nvar _ = 0\n")
+
+
+def evaluate_one(ws, case, tests, tag):
+    base = ws / 'control' / 'eval' / tag
+    if base.exists():
+        shutil.rmtree(base)
     out = {'tests': [str(t) for t in tests], 'runs': {}}
     for mode, source in (('vuln', expand(case['source_root'])), ('fix', expand(case['fix_root'])), ('decoy', expand(case['source_root']))):
         results = []
@@ -216,16 +233,61 @@ def evaluate(ws, case):
             dst = base / f'{mode}-{secrets.token_hex(3)}'
             copytree(source, dst)
             if mode == 'decoy':
-                (dst / 'DECOY.md').write_text('unrelated decoy change\n')
+                add_decoy(dst, case)
             results.append(run_go_test(dst, case, tests))
         out['runs'][mode] = results
-    vuln_ok = all(r['exit'] != 0 and r['failed'] and not r['compile_error'] for r in out['runs']['vuln'])
-    fix_ok = all(r['passed'] and not r['compile_error'] for r in out['runs']['fix'])
-    decoy_ok = all(r['exit'] != 0 and r['failed'] and not r['compile_error'] for r in out['runs']['decoy'])
-    out['vuln_ok'] = vuln_ok; out['fix_ok'] = fix_ok; out['decoy_ok'] = decoy_ok
-    out['verdict'] = 'reproduced' if vuln_ok and fix_ok and decoy_ok else 'rejected'
+    out['vuln_ok'] = all(r['exit'] != 0 and r['failed'] and not r['compile_error'] for r in out['runs']['vuln'])
+    out['fix_ok'] = all(r['passed'] and not r['compile_error'] for r in out['runs']['fix'])
+    out['decoy_ok'] = all(r['exit'] != 0 and r['failed'] and not r['compile_error'] for r in out['runs']['decoy'])
+    out['verdict'] = 'reproduced' if out['vuln_ok'] and out['fix_ok'] and out['decoy_ok'] else 'rejected'
     out['semantic_review'] = 'pending'
     return out
+
+
+def evaluate(ws, case):
+    tests = sorted((ws / 'agent' / 'findings').glob('*/test.go'))
+    if not tests:
+        return {'verdict': 'no-test', 'tests': [], 'findings': []}
+    findings = []
+    for i, test in enumerate(tests):
+        r = evaluate_one(ws, case, [test], f'{i}-{test.parent.name}')
+        r['test'] = str(test)
+        findings.append(r)
+    valid = [r for r in findings if r['verdict'] == 'reproduced']
+    chosen = valid[0] if valid else findings[0]
+    out = {
+        'tests': [str(t) for t in tests],
+        'findings': findings,
+        'verdict': 'reproduced' if valid else 'rejected',
+        'semantic_review': 'pending',
+        'vuln_ok': chosen['vuln_ok'],
+        'fix_ok': chosen['fix_ok'],
+        'decoy_ok': chosen['decoy_ok'],
+        'runs': chosen['runs'],
+    }
+    return out
+
+
+def finalize_record(record, cap):
+    total = record.get('total_cost_usd')
+    if not isinstance(total, (int, float)):
+        record['accounting_error'] = 'missing total_cost_usd'
+        total = cap
+    jev = record.get('jev', {}).get('cost_usd') or 0
+    combined = round(total + jev, 6)
+    audit = record.get('audit', {})
+    audit_clean = not any(audit.get(k) for k in ('docker', 'network', 'subagent'))
+    technical = record.get('evaluation', {}).get('verdict') == 'reproduced'
+    semantic = record.get('evaluation', {}).get('semantic_review') == 'accepted'
+    within_cap = combined <= cap + 1e-9
+    valid = technical and semantic and audit_clean and within_cap and 'accounting_error' not in record
+    record['combined_cost_usd'] = combined
+    record['audit_clean'] = audit_clean
+    record['within_cap'] = within_cap
+    record['valid'] = valid
+    record['censored'] = not valid
+    record['cost_to_first_valid_usd'] = combined if valid else cap
+    return record
 
 def jev_usage(ws):
     log = ws / 'control' / 'jev-calls.jsonl'
@@ -245,15 +307,18 @@ def cmd_run(args):
     running = docker('inspect', '--format', '{{.State.Running}}', meta['container'])
     if running.stdout.strip() != 'true': raise SystemExit('container is not running')
     run_dir = ws / 'control' / 'runs' / time.strftime('%Y%m%dT%H%M%S'); run_dir.mkdir(parents=True)
+    jev_reserve = args.jev_reserve_usd if meta['arm'] == 'jev' else 0.0
+    claude_cap = max(0.0, args.max_budget_usd - jev_reserve)
     cmd = ['claude', '-p', (ws / 'agent' / 'TASK.md').read_text(),
            '--settings', str(ws / 'control' / 'claude-settings.json'),
            '--setting-sources', 'project', '--disable-slash-commands', '--strict-mcp-config',
            '--model', args.model, '--effort', args.effort, '--permission-mode', 'acceptEdits',
-           '--output-format', 'stream-json', '--verbose', '--max-budget-usd', str(args.max_budget_usd),
+           '--output-format', 'stream-json', '--verbose', '--max-budget-usd', f'{claude_cap:.6f}',
            '--disallowedTools', 'Task', 'Agent']
     record = {'case': case['id'], 'arm': meta['arm'], 'model_requested': args.model, 'effort': args.effort,
-              'cap_usd': args.max_budget_usd, 'started_at': now(), 'args': cmd[3:]}
-    print(f'run {case["id"]} arm={meta["arm"]} model={args.model} cap=${args.max_budget_usd}')
+              'cap_usd': args.max_budget_usd, 'claude_cap_usd': round(claude_cap, 6),
+              'jev_reserve_usd': jev_reserve, 'started_at': now(), 'args': cmd[3:]}
+    print(f'run {case["id"]} arm={meta["arm"]} model={args.model} cap=${args.max_budget_usd} claude_cap=${claude_cap:.3f}')
     started = time.monotonic()
     with open(run_dir / 'stream.jsonl', 'wb') as out, open(run_dir / 'stderr.log', 'wb') as err:
         proc = subprocess.Popen(cmd, cwd=ws / 'agent', stdout=out, stderr=err)
@@ -269,16 +334,31 @@ def cmd_run(args):
                              'subagent': sum(1 for t in tools if t['name'] in ('Task','Agent'))}})
     record['jev'] = jev_usage(ws)
     record['evaluation'] = evaluate(ws, case)
-    if record['evaluation']['verdict'] == 'reproduced':
-        record['cost_to_first_valid_usd'] = round((total_cost or 0) + record['jev']['cost_usd'], 6)
-        record['censored'] = False
-    else:
-        record['cost_to_first_valid_usd'] = args.max_budget_usd
-        record['censored'] = True
+    record = finalize_record(record, args.max_budget_usd)
     (run_dir / 'run.json').write_text(json.dumps(record, indent=2) + '\n')
-    print(f'done exit={proc.returncode} claude=${total_cost} jev=${record["jev"]["cost_usd"]} turns={main.get("num_turns") if main else None} verdict={record["evaluation"]["verdict"]}')
+    print(f'done exit={proc.returncode} claude=${total_cost} jev=${record["jev"]["cost_usd"]} combined=${record["combined_cost_usd"]} turns={main.get("num_turns") if main else None} technical={record["evaluation"]["verdict"]} valid={record["valid"]}')
     print(f'     audit={record["audit"]} record={run_dir / "run.json"}')
-    return 0 if record['evaluation']['verdict'] == 'reproduced' else 2
+    return 0 if record['valid'] else 2
+
+
+def cmd_adjudicate(args):
+    ws = pathlib.Path(args.workspace).resolve()
+    if args.run:
+        path = pathlib.Path(args.run)
+        if not path.is_absolute():
+            path = ws / path
+    else:
+        paths = sorted((ws / 'control' / 'runs').glob('*/run.json'))
+        if not paths:
+            raise SystemExit('no run.json found')
+        path = paths[-1]
+    record = json.loads(path.read_text())
+    record.setdefault('evaluation', {})['semantic_review'] = 'accepted' if args.accept else 'rejected'
+    record['evaluation']['semantic_note'] = args.note
+    record = finalize_record(record, record.get('cap_usd', 30.0))
+    path.write_text(json.dumps(record, indent=2) + '\n')
+    print(f'adjudicated {path} semantic={record["evaluation"]["semantic_review"]} valid={record["valid"]}')
+    return 0 if record['valid'] else 2
 
 def cmd_teardown(args):
     ws = pathlib.Path(args.workspace).resolve()
@@ -294,11 +374,15 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest='cmd', required=True)
     p = sub.add_parser('prepare'); p.add_argument('--case', choices=sorted(CASES), required=True); p.add_argument('--arm', choices=('vanilla','route-index','jev'), required=True); p.add_argument('--workspace', required=True)
-    p = sub.add_parser('run'); p.add_argument('--workspace', required=True); p.add_argument('--model', default=MODEL); p.add_argument('--effort', default='high'); p.add_argument('--max-budget-usd', type=float, default=30.0)
+    p = sub.add_parser('run'); p.add_argument('--workspace', required=True); p.add_argument('--model', default=MODEL); p.add_argument('--effort', default='high'); p.add_argument('--max-budget-usd', type=float, default=30.0); p.add_argument('--jev-reserve-usd', type=float, default=1.0)
+    p = sub.add_parser('adjudicate'); p.add_argument('--workspace', required=True); p.add_argument('--run'); p.add_argument('--accept', action='store_true'); p.add_argument('--reject', action='store_true'); p.add_argument('--note', default='')
     p = sub.add_parser('teardown'); p.add_argument('--workspace', required=True)
     args = ap.parse_args()
     if args.cmd == 'prepare': return cmd_prepare(args)
     if args.cmd == 'run': return cmd_run(args)
+    if args.cmd == 'adjudicate':
+        if args.accept == args.reject: raise SystemExit('choose exactly one of --accept/--reject')
+        return cmd_adjudicate(args)
     return cmd_teardown(args)
 
 if __name__ == '__main__':
