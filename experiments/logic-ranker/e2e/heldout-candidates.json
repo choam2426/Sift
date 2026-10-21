@@ -16,9 +16,18 @@
       "router": "gin",
       "bug_class": "path-prefix-object-scope",
       "question": "body-object",
-      "oracle": {"status": "validated", "kind": "custom", "result": "fail-on-vuln/pass-on-fix"},
-      "routes": {"status": "incomplete", "count": 162, "target_present": false, "note": "target route is registered in a helper function; extractor only emits 1 route for this pattern"},
-      "eligible": false
+      "oracle": {
+        "status": "validated",
+        "kind": "custom",
+        "result": "fail-on-vuln/pass-on-fix"
+      },
+      "routes": {
+        "status": "complete",
+        "count": 233,
+        "target_present": true,
+        "note": "POST /share/create present after helper propagation"
+      },
+      "eligible": true
     },
     {
       "id": "gotify-password-change",
@@ -30,8 +39,17 @@
       "router": "gin",
       "bug_class": "missing-elevated-session-gate",
       "question": "configured-gates",
-      "oracle": {"status": "validated", "kind": "custom", "result": "fail-on-vuln/pass-on-fix"},
-      "routes": {"status": "complete", "count": 37, "target_present": true, "note": "POST /current/user/password present"},
+      "oracle": {
+        "status": "validated",
+        "kind": "custom",
+        "result": "fail-on-vuln/pass-on-fix"
+      },
+      "routes": {
+        "status": "complete",
+        "count": 37,
+        "target_present": true,
+        "note": "POST /current/user/password present"
+      },
       "eligible": true
     },
     {
@@ -44,9 +62,18 @@
       "router": "gorilla/mux",
       "bug_class": "privilege-hierarchy-role-collision",
       "question": "configured-gates",
-      "oracle": {"status": "validated", "kind": "upstream-db-test", "result": "fail-on-vuln/pass-on-fix"},
-      "routes": {"status": "blocked", "count": 1, "target_present": false, "note": "extractor does not support gorilla/mux"},
-      "eligible": false
+      "oracle": {
+        "status": "validated",
+        "kind": "upstream-db-test",
+        "result": "fail-on-vuln/pass-on-fix"
+      },
+      "routes": {
+        "status": "complete",
+        "count": 329,
+        "target_present": true,
+        "note": "GET/POST /api/roles present after mux support"
+      },
+      "eligible": true
     },
     {
       "id": "pterodactyl-jwt-scope",
@@ -58,8 +85,17 @@
       "router": "gin",
       "bug_class": "token-scope-confusion",
       "question": "configured-gates",
-      "oracle": {"status": "not-built", "kind": "custom", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "complete",
+        "count": 35,
+        "target_present": true,
+        "note": "POST /upload/file and GET /download/file present"
+      },
       "eligible": false
     },
     {
@@ -72,8 +108,17 @@
       "router": "gin",
       "bug_class": "missing-step-up-gate",
       "question": "configured-gates",
-      "oracle": {"status": "needs-adapter", "kind": "upstream-test-panics-on-vuln", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "needs-adapter",
+        "kind": "upstream-test-panics-on-vuln",
+        "result": null
+      },
+      "routes": {
+        "status": "incomplete",
+        "count": 231,
+        "target_present": false,
+        "note": "cosy generic router not extracted"
+      },
       "eligible": false
     },
     {
@@ -86,8 +131,17 @@
       "router": "gin",
       "bug_class": "privilege-data-exposure",
       "question": "configured-gates",
-      "oracle": {"status": "not-built", "kind": "custom", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "complete",
+        "count": 320,
+        "target_present": true,
+        "note": "GET /api/user/ present after nested-group fix"
+      },
       "eligible": false
     },
     {
@@ -100,8 +154,16 @@
       "router": "echo",
       "bug_class": "privilege-hierarchy",
       "question": "configured-gates",
-      "oracle": {"status": "not-built", "kind": "custom", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "not-checked",
+        "count": null,
+        "target_present": null
+      },
       "eligible": false,
       "note": "same project as a development case; only use as backup"
     },
@@ -115,8 +177,16 @@
       "router": "gin",
       "bug_class": "revoked-share-state",
       "question": "authorization-state",
-      "oracle": {"status": "not-built", "kind": "custom", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "complete",
+        "count": 157,
+        "target_present": true
+      },
       "eligible": false,
       "note": "fix commit not listed in advisory"
     },
@@ -130,8 +200,16 @@
       "router": "gin",
       "bug_class": "identity-linking",
       "question": "authorization-state",
-      "oracle": {"status": "not-built", "kind": "custom", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "complete",
+        "count": 276,
+        "target_present": true
+      },
       "eligible": false,
       "note": "fix commit not listed in advisory"
     },
@@ -145,8 +223,16 @@
       "router": "gin",
       "bug_class": "cross-tenant-agent-identity",
       "question": "configured-gates",
-      "oracle": {"status": "not-built", "kind": "custom", "result": null},
-      "routes": {"status": "not-checked", "count": null, "target_present": null},
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "incomplete",
+        "count": 42,
+        "target_present": false
+      },
       "eligible": false,
       "note": "fix commit not listed in advisory"
     },
@@ -160,8 +246,16 @@
       "router": "custom",
       "bug_class": "path-authorization",
       "question": "body-object",
-      "oracle": {"status": "upstream-test-present", "kind": "upstream", "result": null},
-      "routes": {"status": "blocked", "count": null, "target_present": false, "note": "no HTTP route table"},
+      "oracle": {
+        "status": "upstream-test-present",
+        "kind": "upstream",
+        "result": null
+      },
+      "routes": {
+        "status": "incomplete",
+        "count": 4,
+        "target_present": false
+      },
       "eligible": false
     },
     {
@@ -174,8 +268,16 @@
       "router": "custom",
       "bug_class": "route-path-confusion",
       "question": "route-authorization",
-      "oracle": {"status": "upstream-test-present", "kind": "upstream", "result": null},
-      "routes": {"status": "blocked", "count": null, "target_present": false, "note": "no Gin/Echo route table"},
+      "oracle": {
+        "status": "upstream-test-present",
+        "kind": "upstream",
+        "result": null
+      },
+      "routes": {
+        "status": "incomplete",
+        "count": 0,
+        "target_present": false
+      },
       "eligible": false
     },
     {
@@ -188,8 +290,40 @@
       "router": "custom",
       "bug_class": "tenant-prefix-scope",
       "question": "body-object",
-      "oracle": {"status": "upstream-test-present", "kind": "upstream", "result": null},
-      "routes": {"status": "blocked", "count": null, "target_present": false, "note": "no HTTP route table"},
+      "oracle": {
+        "status": "upstream-test-present",
+        "kind": "upstream",
+        "result": null
+      },
+      "routes": {
+        "status": "incomplete",
+        "count": 107,
+        "target_present": false,
+        "note": "custom filer handler not extracted"
+      },
+      "eligible": false
+    },
+    {
+      "id": "cosmos-bearer-token",
+      "project": "Cosmos-Server",
+      "repo": "https://github.com/azukaar/Cosmos-Server",
+      "ghsa": "GHSA-5fqm-cc34-fcf5",
+      "fix_commit": "59c561d686c8f9843b3e092b50f6346c481d8bbf",
+      "vuln_commit": "88de73d",
+      "router": "custom",
+      "bug_class": "bearer-token-validation",
+      "question": "configured-gates",
+      "oracle": {
+        "status": "not-built",
+        "kind": "custom",
+        "result": null
+      },
+      "routes": {
+        "status": "complete",
+        "count": 155,
+        "target_present": true,
+        "note": "/cosmos/api/constellation/public-devices present"
+      },
       "eligible": false
     }
   ]

@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-21",
+  "extractor": "v7: Gin/Echo/Huma, gorilla/mux, helper registration functions, package-alias handler resolution",
+  "cases": [
+    {"id": "gotify-password-change", "routes": 37, "target": "POST current/user/password", "target_present": true, "eligible": true},
+    {"id": "openlist-sharing-path", "routes": 233, "target": "POST /share/create", "target_present": true, "eligible": true},
+    {"id": "semaphore-role-slug", "routes": 329, "target": "GET/POST /api/roles", "target_present": true, "eligible": true},
+    {"id": "pterodactyl-jwt-scope", "routes": 35, "target": "POST /upload/file; GET /download/file", "target_present": true, "eligible": true, "oracle": "not-built"},
+    {"id": "new-api-root-token", "routes": 320, "target": "GET /api/user/", "target_present": true, "eligible": true, "oracle": "not-built"},
+    {"id": "cosmos-bearer-token", "routes": 155, "target": "/cosmos/api/constellation/public-devices", "target_present": true, "eligible": true, "oracle": "not-built"},
+    {"id": "arcane-user-update-hierarchy", "routes": 106, "target": "PUT /users/{userId}", "target_present": true, "eligible": true, "oracle": "not-built", "note": "development project"},
+    {"id": "cloudreve-revoked-share", "routes": 157, "target": "share/:id", "target_present": true, "eligible": false, "note": "fix commit not identified"},
+    {"id": "authorizer-oidc-email-link", "routes": 276, "target": "GET/POST /oauth_callback/:oauth_provider", "target_present": true, "eligible": false, "note": "fix commit not identified"},
+    {"id": "nginx-ui-secure-session", "routes": 231, "target": "/api/users/:id", "target_present": false, "eligible": false, "note": "cosy generic router not extracted"},
+    {"id": "seaweedfs-jwt-prefix", "routes": 107, "target": "filer JWT route", "target_present": false, "eligible": false},
+    {"id": "woodpecker-agent-scope", "routes": 42, "target": "agent route", "target_present": false, "eligible": false},
+    {"id": "goshs-acl-bulk", "routes": 5, "target": "bulk download route", "target_present": false, "eligible": false},
+    {"id": "olivetin-logs", "routes": 3, "target": "StartActionAndWait", "target_present": false, "eligible": false},
+    {"id": "rclone-restic-path", "routes": 4, "target": "restic repo route", "target_present": false, "eligible": false},
+    {"id": "traefik-request-target", "routes": 0, "target": "request-target route", "target_present": false, "eligible": false},
+    {"id": "echo-encoded-slash", "routes": 0, "target": "static route", "target_present": false, "eligible": false},
+    {"id": "kin-openapi-security", "routes": 0, "target": "security requirement operation", "target_present": false, "eligible": false},
+    {"id": "sftpgo-pattern-filter", "routes": 0, "target": "copy route", "target_present": false, "eligible": false},
+    {"id": "goploy-idor", "routes": 3, "target": "project route", "target_present": false, "eligible": false}
+  ]
+}

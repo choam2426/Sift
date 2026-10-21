@@ -1,7 +1,7 @@
 # ADR 0008: held-out 사례는 oracle과 route coverage를 모두 통과해야 한다
 
 - 날짜: 2026-10-21
-- 상태: **제안**. confirmatory 실행은 아직 하지 않았다. 사례 선정과 extractor 범위를 사용자와 합의한 뒤 실행한다.
+- 상태: **제안, A 구현 완료**. Extractor를 mux·helper 등록까지 확장했고 독립 리뷰를 기다린다. confirmatory 실행은 아직 하지 않았다.
 - 관련: [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md)
 
 ## 맥락
@@ -27,45 +27,66 @@
 - Nginx UI의 `api/user/security_test.go`는 취약판에서 assertion failure가 아니라 panic을 낸다. evaluator는 `--- FAIL:`만 실패로 인정하므로 adapter가 필요하다.
 - Pterodactyl, New API, Arcane users:update는 custom behavior test가 필요하다.
 
-### Route coverage
+### Route coverage (A 구현 후, extractor v7)
 
-현재 `extract_routes`는 Gin/Echo/Huma만 다룬다.
+`extract_routes`를 gorilla/mux, helper 등록 함수, package alias 기반 handler 해석까지 확장했다. 전체 수치는 `experiments/logic-ranker/e2e/heldout-route-coverage.json`에 있다.
 
 | 사례 | route 수 | 대상 route 포함 | 판정 |
 | --- | ---: | --- | --- |
-| Gotify | 37 | `POST current/user/password` 포함 | 사용 가능 |
-| OpenList | 162 | `/share/create` 누락 | helper 등록 함수 때문에 불완전 |
-| Semaphore | 1 | 없음 | gorilla/mux 미지원 |
-| rclone/Traefik/SeaweedFS | — | — | HTTP route table 없음 |
-| Pterodactyl/Nginx UI/New API | — | 미확인 | Gin이므로 추출 가능성 있음 |
+| Gotify | 37 | `POST current/user/password` | 사용 가능 |
+| OpenList | 233 | `POST /share/create` | 사용 가능 |
+| Semaphore | 329 | `GET/POST /api/roles` | 사용 가능 |
+| Pterodactyl | 35 | `POST /upload/file`, `GET /download/file` | route 가능, oracle 필요 |
+| New API | 320 | `GET /api/user/` | route 가능, oracle 필요 |
+| Cosmos | 155 | `/cosmos/api/constellation/public-devices` | route 가능, oracle 필요 |
+| Arcane | 106 | `PUT /users/{userId}` | route 가능, oracle 필요, dev project |
+| Cloudreve | 157 | `share/:id` | route 가능, fix commit 미확인 |
+| Authorizer | 276 | `/oauth_callback/:oauth_provider` | route 가능, fix commit 미확인 |
+| Nginx UI | 231 | `/api/users/:id` 누락 | cosy generic router 미지원 |
+| SeaweedFS | 107 | filer JWT route 누락 | custom handler 미지원 |
+| Woodpecker | 42 | agent route 누락 | helper prefix 미지원 |
+| goshs/OliveTin/rclone/Goploy | 3~5 | 대상 누락 | custom router 미지원 |
+| Traefik/Echo/kin-openapi/SFTPGo | 0 | — | HTTP route table 없음 |
 
 ## 후보 pool
 
-전체 후보와 상태는 `experiments/logic-ranker/e2e/heldout-candidates.json`에 있다. 13개 후보 중 현재 `eligible=true`는 Gotify 하나다.
+전체 후보와 상태는 `experiments/logic-ranker/e2e/heldout-candidates.json`에 있다.
 
 | 우선순위 | 사례 | router | oracle | route | 상태 |
 | ---: | --- | --- | --- | --- | --- |
 | 1 | Gotify password change | Gin | 검증됨 | 37, 대상 포함 | **eligible** |
-| 2 | OpenList sharing path | Gin | 검증됨 | 162, 대상 누락 | repair 필요 |
-| 3 | Semaphore role slug | mux | 검증됨 | 1 | extractor mux 지원 필요 |
-| 4 | Pterodactyl JWT scope | Gin | custom 필요 | 미확인 | 보류 |
-| 5 | Nginx UI secure session | Gin | adapter 필요 | 미확인 | 보류 |
-| 6 | New API root token | Gin | custom 필요 | 미확인 | 보류 |
-| 7 | Cloudreve revoked share | Gin | fix commit 미확인 | 미확인 | 보류 |
-| 8 | Authorizer OIDC link | Gin | fix commit 미확인 | 미확인 | 보류 |
-| 9 | Woodpecker agent scope | Gin | fix commit 미확인 | 미확인 | 보류 |
-| 10 | Arcane users:update | Echo | custom 필요 | 미확인 | dev project, backup |
-| 11 | rclone restic path | custom | upstream test | 없음 | route blocked |
-| 12 | Traefik request-target | custom | upstream test | 없음 | route blocked |
-| 13 | SeaweedFS JWT prefix | custom | upstream test | 없음 | route blocked |
+| 2 | OpenList sharing path | Gin | 검증됨 | 233, 대상 포함 | **eligible** |
+| 3 | Semaphore role slug | mux | 검증됨 | 329, 대상 포함 | **eligible** |
+| 4 | Pterodactyl JWT scope | Gin | custom 필요 | 35, 대상 포함 | route ready |
+| 5 | New API root token | Gin | custom 필요 | 320, 대상 포함 | route ready |
+| 6 | Cosmos bearer token | custom | custom 필요 | 155, 대상 포함 | route ready |
+| 7 | Cloudreve revoked share | Gin | fix commit 미확인 | 157, 대상 포함 | fix 필요 |
+| 8 | Authorizer OIDC link | Gin | fix commit 미확인 | 276, 대상 포함 | fix 필요 |
+| 9 | Arcane users:update | Echo | custom 필요 | 106, 대상 포함 | dev project, backup |
+| 10 | Nginx UI secure session | Gin | adapter 필요 | 231, 대상 누락 | blocked |
+| 11 | SeaweedFS JWT prefix | custom | upstream test | 107, 대상 누락 | blocked |
+| 12 | Woodpecker agent scope | Gin | fix commit 미확인 | 42, 대상 누락 | blocked |
+| 13 | rclone/Traefik/goshs/OliveTin | custom | upstream test | 0~5, 대상 누락 | blocked |
 
-## 결정 제안
+## 결정과 구현
 
-**A. Extractor를 gorilla/mux와 helper 등록 함수까지 확장한다.** Semaphore를 즉시 사용할 수 있고, mux를 쓰는 Go 프로젝트로 후보가 넓어진다. route bundle이 대상 route를 포함하는지 자동 검증한다. 비용은 extractor 구현·회귀 테스트다.
+**A. Extractor를 gorilla/mux와 helper 등록 함수까지 확장한다.** 구현했다. Semaphore·OpenList·New API의 대상 route가 bundle에 들어왔고, route coverage를 자동 확인할 수 있게 됐다.
 
-**B. Gin/Echo 사례로만 8개를 채운다.** extractor는 그대로 두고, Gin/Echo 후보의 oracle을 만든다. 구현은 적지만 후보가 줄고, OpenList의 helper 등록 문제는 별도 repair가 필요하다.
+**B. Gin/Echo 사례로만 8개를 채운다.** A로도 8개가 안 되면 B를 병행한다.
 
-권고: **A를 먼저 하고, 그래도 8개가 안 되면 B를 병행한다.** route extraction 자체가 제품 가설의 핵심이므로, 대상 route를 놓치는 extractor로 confirmatory를 돌리면 `route-index` arm을 부당하게 약화시킨다.
+A의 구현 범위:
+- `Path`, `PathPrefix`, `Subrouter`, `Methods`, `HandlerFunc` 체인
+- 중첩 group과 `Use` 미들웨어
+- router group을 인자로 받는 helper 함수의 호출 site prefix
+- selector 이름과 package basename이 일치하는 handler 우선 해석
+- 중첩 호출에서 inner route 중복 방지
+
+## 아직 남은 일
+
+- A 구현에 대한 독립 리뷰(Mythos, Astra)와 P0/P1 수정
+- Pterodactyl·New API·Cosmos의 behavior oracle
+- Cloudreve·Authorizer의 fix commit 확인
+- 8개 eligible 사례 확정 후 pre-registration 동결
 
 ## 확정 전 pre-registration
 
