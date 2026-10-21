@@ -117,6 +117,13 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - Jev는 `GET /debug/pprof/`를 30/147로 올렸고 top10에 넣지 못했다. vanilla가 가장 빨랐고 ranker 두 arm은 약 52% 더 비쌌다.
 - Kite와 함께 **국소 gate 결함에서는 ranker overhead**라는 결과를 뒷받침한다.
 
+## Held-out 준비 상태 (2026-10-21)
+
+- 후보 13개를 `heldout-candidates.json`에 고정했다. 현재 3-arm에 바로 쓸 수 있는 사례는 Gotify 하나다.
+- oracle 검증: OpenList, Gotify, Semaphore. 셋 다 취약판 실패·수정판 통과를 확인했다.
+- route coverage: Gotify 37개(대상 포함), OpenList 162개(대상 `/share/create` 누락), Semaphore 1개(gorilla/mux 미지원).
+- confirmatory 실행 전에 extractor를 mux·helper 등록까지 확장하거나 Gin/Echo 사례로 8개를 채워야 한다. 자세한 gate는 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
+
 ## 다음
 
 개발 사례 4개를 마쳤다. blind held-out 사례를 선정하고, 질문·K·run 수를 결과와 무관하게 pre-register한 뒤 confirmatory 규모를 정한다.
