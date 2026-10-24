@@ -14,7 +14,7 @@ CASE = {
 
 class TaskTests(unittest.TestCase):
     def test_question_is_symmetric(self):
-        texts = [e2e.task(CASE, arm) for arm in ('vanilla', 'route-index', 'jev')]
+        texts = [e2e.task(CASE, arm) for arm in ('vanilla', 'route-index', 'jev', 'jev-unit')]
         for text in texts:
             self.assertIn(CASE['question'], text)
         self.assertNotIn('Jev ranker', texts[0])

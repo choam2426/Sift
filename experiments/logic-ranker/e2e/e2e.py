@@ -68,8 +68,13 @@ def task(case, arm):
         routes = """
 A route index is provided at `routes.jsonl`. It contains decision-path units (route registration, middleware, handler, related functions), ordered by ID. Use it as an investigation aid; it is not a list of confirmed bugs.
 """
+    units = ''
+    if arm == 'jev-unit':
+        units = """
+A unit index is provided at `units.jsonl`. It groups project functions by source file and includes their source. It is an investigation aid, ordered by ID; it is not a list of confirmed bugs.
+"""
     jev = ''
-    if arm == 'jev':
+    if arm in ('jev', 'jev-unit'):
         jev = """
 You also have a Jev ranker. Read JEV.md. Jev scores units; it does not verify them.
 """
@@ -91,7 +96,7 @@ Deliver findings under `findings/<short-name>/`:
 - `test.go`: a Go test in the package used by `{case['test_pkg']}`. It must fail on the vulnerable source and pass on the fixed source. It will be copied into pristine source trees for evaluation.
 
 Rules: no network, no external reports. Keep scratch files under `scratch/`.
-{question}{routes}{jev}"""
+{question}{routes}{units}{jev}"""
 
 def routes_guide(case):
     return f'''# Route index
@@ -101,7 +106,17 @@ def routes_guide(case):
 The file is in a fixed order (ID ascending). Use it to decide what to inspect; it is not evidence that a route is vulnerable. The source is the ground truth.
 '''
 
-def jev_guide(case):
+def units_guide(case):
+    return f'''# Unit index
+
+`units.jsonl` contains file-level decision units. Each row has `ID`, `Path`, `Handler`
+(or package), `Text` and `Members`. It groups functions by source file and includes
+their source. Use it to decide what to inspect; it is not evidence that a unit is vulnerable.
+
+The file is in a fixed order (ID ascending).
+'''
+
+def jev_guide(case, unit_file='routes.jsonl'):
     return f'''# Jev ranker
 
 Jev 1.14.0 is a **candidate ranker**, not a verifier. A Noul score is a priority signal; it is not proof of a bug and a low score does not prove safety.
@@ -114,7 +129,7 @@ Use the pre-registered top-K ({case['top_k']}).
 
 ```bash
 ./jev stats
-./jev rank --units routes.jsonl --question "{case['question']}" --top {case['top_k']}
+./jev rank --units {unit_file} --question "{case['question']}" --top {case['top_k']}
 ```
 
 Investigate the top units with `./tb test` and `./tb exec`. Do not treat the ranking as confirmation. The API key is held by the harness; the tool only accepts state + question. If you ask additional questions, they are logged and audited separately.
@@ -144,7 +159,10 @@ def cmd_prepare(args):
     if args.arm in ('route-index', 'jev'):
         shutil.copy(expand(case['routes']), ws / 'agent' / 'routes.jsonl')
         (ws / 'agent' / 'ROUTES.md').write_text(routes_guide(case))
-    if args.arm == 'jev':
+    if args.arm == 'jev-unit':
+        shutil.copy(expand(case['units']), ws / 'agent' / 'units.jsonl')
+        (ws / 'agent' / 'UNITS.md').write_text(units_guide(case))
+    if args.arm in ('jev', 'jev-unit'):
         jev_sock = ws / 'control' / 'jev.sock'
         proc = subprocess.Popen([sys.executable, str(HERE / 'jev_proxy.py'), '--socket', str(jev_sock),
                                  '--log', str(ws / 'control' / 'jev-calls.jsonl'),
@@ -157,7 +175,7 @@ def cmd_prepare(args):
         shutil.copy(HERE / 'jev_cli.py', ws / 'agent' / 'jev_cli.py')
         (ws / 'agent' / 'jev').write_text(f'#!/bin/sh\nexport JEV_SOCKET="{jev_sock}"\nexec python3 "{ws / "agent" / "jev_cli.py"}" "$@"\n')
         (ws / 'agent' / 'jev').chmod(0o755)
-        (ws / 'agent' / 'JEV.md').write_text(jev_guide(case))
+        (ws / 'agent' / 'JEV.md').write_text(jev_guide(case, 'units.jsonl' if args.arm == 'jev-unit' else 'routes.jsonl'))
         (ws / 'control' / 'jev.pid').write_text(str(proc.pid))
     (ws / 'control' / 'claude-settings.json').write_text(json.dumps(settings(ws, jev_sock), indent=2) + '\n')
     (ws / 'control' / 'workspace.json').write_text(json.dumps({
@@ -373,7 +391,7 @@ def cmd_teardown(args):
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest='cmd', required=True)
-    p = sub.add_parser('prepare'); p.add_argument('--case', choices=sorted(CASES), required=True); p.add_argument('--arm', choices=('vanilla','route-index','jev'), required=True); p.add_argument('--workspace', required=True)
+    p = sub.add_parser('prepare'); p.add_argument('--case', choices=sorted(CASES), required=True); p.add_argument('--arm', choices=('vanilla','route-index','jev','jev-unit'), required=True); p.add_argument('--workspace', required=True)
     p = sub.add_parser('run'); p.add_argument('--workspace', required=True); p.add_argument('--model', default=MODEL); p.add_argument('--effort', default='high'); p.add_argument('--max-budget-usd', type=float, default=30.0); p.add_argument('--jev-reserve-usd', type=float, default=1.0)
     p = sub.add_parser('adjudicate'); p.add_argument('--workspace', required=True); p.add_argument('--run'); p.add_argument('--accept', action='store_true'); p.add_argument('--reject', action='store_true'); p.add_argument('--note', default='')
     p = sub.add_parser('teardown'); p.add_argument('--workspace', required=True)

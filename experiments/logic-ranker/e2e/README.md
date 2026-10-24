@@ -127,6 +127,10 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - SSA call-graph 보강으로 OpenList는 `GetSharingUnwrapPath`까지 bundle에 포함해 coverage gate를 통과했다. Semaphore는 OSS `AddRole`이 404 stub이라 제외했다. 현재 post-cutoff 통과 사례는 **OpenList 1개**다.
 - 따라서 8개 confirmatory 세트는 아직 없다. `eligible=true`인 사례는 없고, oracle 함수를 포함하는 추출 방식과 pool 확장 전에는 실행하지 않는다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
 
+## Stage 0 unit-level arm
+
+`--arm jev-unit`은 file-level unit bundle(`units.jsonl`)과 Jev guide를 제공한다. `extract_units`는 `-packages`가 비어 있으면 모든 non-test package를 포함하고, `file_units.py`가 함수를 source file 단위로 묶는다. 이 arm은 route-index ablation과 별도로, `vanilla` vs `vanilla + Jev package` 제품 비교의 treatment다.
+
 ## 다음
 
 개발 사례 4개를 마쳤다. blind held-out 사례를 선정하고, 질문·K·run 수를 결과와 무관하게 pre-register한 뒤 confirmatory 규모를 정한다.

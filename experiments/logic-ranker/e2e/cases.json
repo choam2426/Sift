@@ -14,7 +14,8 @@
     "task_scope": "Kubernetes proxy path handling",
     "question": "Does this route enforce the caller's authorization for the resource and context it actually operates on before the protected operation?",
     "top_k": 10,
-    "frontend_placeholder": false
+    "frontend_placeholder": false,
+    "units": "~/sift-runs/logic-e2e/units-pkg2/kite/files.jsonl"
   },
   {
     "id": "pocketid",
@@ -31,7 +32,8 @@
     "task_scope": "OIDC token issuance and refresh",
     "question": "Does this route re-check the current authorization, account state, and group restrictions before issuing or extending credentials?",
     "top_k": 10,
-    "frontend_placeholder": false
+    "frontend_placeholder": false,
+    "units": "~/sift-runs/logic-e2e/units-pkg2/pocketid/files.jsonl"
   },
   {
     "id": "vikunja",
@@ -48,7 +50,8 @@
     "task_scope": "kanban task bucket updates and project authorization",
     "question": "Does this route authorize the object identified in the request body as well as the objects in the URL before the protected operation?",
     "top_k": 10,
-    "frontend_placeholder": true
+    "frontend_placeholder": true,
+    "units": "~/sift-runs/logic-e2e/units-pkg2/vikunja/files.jsonl"
   },
   {
     "id": "arcane",
@@ -65,6 +68,7 @@
     "task_scope": "manager authentication and admin-required routes",
     "question": "Does this route apply every configured authorization gate before the handler or side effect runs?",
     "top_k": 10,
-    "frontend_placeholder": false
+    "frontend_placeholder": false,
+    "units": "~/sift-runs/logic-e2e/units-pkg2/arcane/files.jsonl"
   }
 ]
