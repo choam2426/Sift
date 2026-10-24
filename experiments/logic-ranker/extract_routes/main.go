@@ -39,11 +39,14 @@ var byName map[string][]string
 var types map[string]map[string]string
 var fieldMap map[string][]string
 var srcs map[string][]byte
+var routeDepth = 2
 
 func main() {
 	root := flag.String("root", ".", "project root")
 	out := flag.String("out", ".", "output dir")
+	depth := flag.Int("depth", 2, "callee depth inside an AST route unit")
 	flag.Parse()
+	routeDepth = *depth
 	fset = token.NewFileSet()
 	funcs = map[string]*Func{}
 	byName = map[string][]string{}
@@ -617,14 +620,14 @@ func routeFromCall(call *ast.CallExpr, pkg string, src []byte, groups map[string
 		parts = append(parts, "Group context:\n"+gsrc)
 	}
 	if len(ids) > 0 {
-		addFunc(&parts, &r.Members, ids[0], 2)
+		addFunc(&parts, &r.Members, ids[0], routeDepth)
 	} else {
 		parts = append(parts, "Handler:\n"+sourceOf(handler, src))
 	}
 	for _, m := range mw {
 		parts = append(parts, "Middleware expression:\n"+sourceOf(m, src))
 		for _, id := range resolveWithVars(m, pkg, vars) {
-			addFunc(&parts, &r.Members, id, 2)
+			addFunc(&parts, &r.Members, id, routeDepth)
 		}
 	}
 	text := strings.Join(parts, "\n\n")
@@ -671,7 +674,7 @@ func humaRoute(call *ast.CallExpr, pkg string, src []byte, vars map[string]strin
 	r := Route{ID: "route:" + method + " " + path, Method: method, Path: path, Handler: hname}
 	parts := []string{fmt.Sprintf("Route: %s %s\nRegistration:\n%s", method, path, sourceOf(call, src))}
 	if len(ids) > 0 {
-		addFunc(&parts, &r.Members, ids[0], 2)
+		addFunc(&parts, &r.Members, ids[0], routeDepth)
 	} else {
 		parts = append(parts, "Handler:\n"+sourceOf(handler, src))
 	}

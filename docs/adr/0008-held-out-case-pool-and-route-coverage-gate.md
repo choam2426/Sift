@@ -129,7 +129,17 @@ P1:
 | Cosmos | 2026-05-26 | **아니오** | 제외 |
 | Cloudreve/Authorizer/Woodpecker | 미확인 | 미확인 | 보류 |
 
-현재 **post-cutoff + oracle + oracle-function coverage**를 모두 만족하는 사례는 **0개**다. OpenList와 Semaphore는 oracle은 통과했지만, route bundle이 oracle이 호출하는 함수(`internal/op.GetSharingUnwrapPath`, `db.ValidateRole`)를 포함하지 않는다. 8개 confirmatory 세트는 물론 2개짜리 confirmatory도 이 extractor로는 정당화되지 않는다.
+SSA 보강 후 OpenList는 oracle 함수까지 포함해 gate를 통과했다. Semaphore는 OSS route가 404 stub이라 제외한다. 현재 **post-cutoff + oracle + oracle-function coverage**를 만족하는 사례는 **OpenList 1개**다. 8개 confirmatory 세트는 아직 만들 수 없다.
+
+## SSA call-graph enrichment (2026-10-21)
+
+AST route extraction alone cannot see the authorization decision when it sits behind package/interface calls. `extract_calls` now loads the module with `go/packages`, builds an SSA call graph (CHA), and enriches each route with reachable functions.
+
+- AST route is generated with `-depth 0` (compact handler/middleware), then SSA enrichment adds the call-graph index and selected project-function sources.
+- OpenList target `GET /sd/:sid/*path` now contains `internal/op.GetSharingUnwrapPath` in both `Members` and `Text`, with `Truncated=false`. `check_coverage.py` passes.
+- Semaphore is excluded: in the OSS build `pro/api.RolesController.AddRole` is a 404 stub, so the `db.ValidateRole` oracle is not reachable from a route.
+- Current post-cutoff + oracle + oracle-function coverage: **OpenList only (1)**.
+- SSA enrichment is CHA-based and over-approximates interface dispatch. It is an index, not a proof. Each case still needs the gate and manual review.
 
 ## 결정
 

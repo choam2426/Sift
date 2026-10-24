@@ -124,7 +124,7 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - route coverage: Gotify 37, OpenList 233, Semaphore 329, Pterodactyl 35, New API 320, Cosmos 155, Arcane 106. 단, 이는 **path-string presence**일 뿐 handler identity·truncation 검사가 아니다.
 - Mythos 5.1과 GPT-6 Astra 리뷰가 둘 다 **REVISE**를 냈다. middleware 누락, Jev 질문 비대칭, coverage gate 미흡, publication date 누락, budget/semantic-review 문제가 P0였다.
 - P0 수정: `Use` middleware, root router, Echo handler 순서, path join, handler-before-middleware, golden fixture, coverage gate, 질문 대칭, 결합 상한, audit 무효화, 실제 decoy, panic reject, semantic adjudicate.
-- post-cutoff filter와 oracle-function coverage를 적용하면 현재 통과 사례는 **0개**다. OpenList·Semaphore는 oracle은 통과했지만 `GetSharingUnwrapPath`·`ValidateRole`이 route bundle에 없다. Gotify·Pterodactyl·New API·SeaweedFS·Cosmos는 수정 커밋이 기준일 이전이라 제외했다.
+- SSA call-graph 보강으로 OpenList는 `GetSharingUnwrapPath`까지 bundle에 포함해 coverage gate를 통과했다. Semaphore는 OSS `AddRole`이 404 stub이라 제외했다. 현재 post-cutoff 통과 사례는 **OpenList 1개**다.
 - 따라서 8개 confirmatory 세트는 아직 없다. `eligible=true`인 사례는 없고, oracle 함수를 포함하는 추출 방식과 pool 확장 전에는 실행하지 않는다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
 
 ## 다음
