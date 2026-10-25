@@ -73,6 +73,19 @@
 - Stage 1 결과를 보고 blinded variance로 표본 수를 다시 계산한다.
 - Stage 1에서 efficacy claim을 하지 않는다.
 
+## 4b. 평가 원칙: search reduction이지 answer localization이 아니다
+
+Jev의 목표는 **취약 함수를 정확히 top-1에 올리는 것**이 아니라, 유효한 발견까지의 **탐색 비용과 경로를 줄이는 것**이다.
+
+- **Primary**: all-in cost to first validated finding. Jev 비용·bundle 생성 비용·실패 시도 비용을 포함한다.
+- **Secondary**: turns, tool calls, wall time, 읽은 파일 수, first relevant unit/route rank.
+- **Diagnostic only**: target file rank, oracle coverage, top-K hit. 이 값이 낮다고 Jev가 실패한 것도, 높다고 성공한 것도 아니다.
+- **Guardrail**: valid-find rate, rejection rate, audit violation. 탐색을 줄여도 검증 실패가 늘면 제품 이득이 아니다.
+- **Selection**: target coverage를 eligibility로 쓰지 않는다. coverage는 mediator/결과 변수로 기록한다.
+- Stage 0의 Arcane이 대표적이다. fix file rank는 39–41/264였지만 route registration file이 1/264였고, 총 탐색 비용은 19% 줄었다. Kite는 target rank가 낮고 vanilla가 이미 빨라 overhead가 됐다.
+
+따라서 Stage 1에서 “target을 top-1에 올렸는가”를 최적화하지 않는다. **총 탐색 비용과 valid finding 비용이 줄었는가**를 본다.
+
 ## 5. 결정 규칙 (초안)
 
 Stage 1 결과에 대해:
