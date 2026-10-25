@@ -88,6 +88,32 @@ Stage 1 결과에 대해:
 - 최종 confirmatory 판정은 Stage 2의 exact Wilcoxon one-sided test와 실질적 threshold를 함께 쓴다.
 - 가장 유리한 project를 제거해도 결론이 유지되는지 sensitivity analysis를 한다.
 
+## 5b. Stage 0 결과 (2026-10-25)
+
+개발 사례 4개에서 `vanilla` vs `unit-Jev`를 arm당 3회 실행했다. File-level unit bundle, Jev cost 포함, semantic acceptance 기준.
+
+| 사례 | vanilla | unit-Jev | all-in ratio | valid |
+| --- | ---: | ---: | ---: | --- |
+| Kite | $1.658 | $1.710 | 1.031 | 3/3 vs 3/3 |
+| Vikunja | $2.213 | $2.045 | 0.924 | 3/3 vs 2/3 |
+| Pocket ID | $3.823 | $2.513 | 0.657 | 3/3 vs 2/3 |
+| Arcane | $2.602 | $2.101 | 0.808 | 3/3 vs 3/3 |
+
+- all-in geometric mean ratio: **0.843** (unit-Jev가 약 15.7% 낮음)
+- valid-only geometric mean ratio: **0.866**
+- 전체 시도 비용 / valid finding: vanilla **$2.574**, unit-Jev **$2.511**
+- 총 valid: vanilla **12/12**, unit-Jev **10/12**
+- unit-Jev 실패 2건: Vikunja r2 Docker audit violation, Pocket ID r3 rejected test(positive control이 수정판에서 실패)
+- target file의 unit rank: Pocket ID **1/127**, Vikunja **2–4/507**, Arcane **39–41/264**, Kite **76/112**
+- Jev 자체 비용은 사례당 $0.009–$0.043로 작았다.
+
+해석:
+
+- 파일 단위 ranking이 좋은 hard case(Pocket ID, Vikunja)에서는 비용 이득이 크다.
+- ceiling case(Kite)에서는 overhead가 발생한다.
+- **비용 이득보다 validity 손실이 더 중요한 신호**다. Pocket ID r3는 test construction 실패, Vikunja r2는 Docker 경계 위반이다.
+- Stage 0는 exploratory이며, treatment를 confirmatory에 바로 고정하지 않는다. Docker isolation/test reliability를 먼저 다룬다.
+
 ## 6. 이 결과가 나오면 제품을 단순화할 것인가
 
 다음 중 하나라도 관측되면 Jev를 기본 제품에서 빼는 것을 진지하게 검토한다.
