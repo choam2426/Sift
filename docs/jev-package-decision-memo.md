@@ -114,6 +114,22 @@ Stage 1 결과에 대해:
 - **비용 이득보다 validity 손실이 더 중요한 신호**다. Pocket ID r3는 test construction 실패, Vikunja r2는 Docker 경계 위반이다.
 - Stage 0는 exploratory이며, treatment를 confirmatory에 바로 고정하지 않는다. Docker isolation/test reliability를 먼저 다룬다.
 
+### 왜 이런 차이가 났나
+
+1. **Jev 비용 자체는 원인이 아니다.** 사례당 Jev 비용은 $0.009–$0.043이고, 차이는 대부분 agent의 턴·tool call에서 나왔다.
+2. **target file이 top-K에 있는가가 탐색 비용을 좌우했다.**
+   - Pocket ID: `internal/service/oidc_service.go` **1/127**. 세 실행 모두 top-1. unit-Jev가 23~49턴으로 vanilla 40~56턴보다 짧았다.
+   - Vikunja: `pkg/models/kanban_task_bucket.go` **2–4/507**. top-10 안. 비용은 7.6% 낮았지만 vanilla도 이미 빨라 차이가 작았다.
+   - Kite: `pkg/kube/proxy.go` **59–77/112**. top-10 밖. unit-Jev는 `ls`/JEV/ranking을 읽는 overhead가 붙어 18~27턴으로 vanilla 15~21턴보다 많았다.
+   - Arcane: fix file `internal/auth/middleware.go`는 **39–41/264**였지만, **route registration file `api/handlers/diagnostics.go`가 1/264**였다. Jev가 route 문맥을 먼저 노출했고 agent가 auth middleware로 따라가 16~35턴으로 vanilla 23~45턴보다 짧았다.
+3. **Jev는 “정답 파일”보다 “결정 경로 입구”를 잘 찾았다.** Arcane이 대표적이다. fix file rank는 중간이었지만 pprof route/diagnostics가 top-1이라 탐색이 줄었다.
+4. **validity 손실은 ranking 실패가 아니라 test construction/경계 문제다.**
+   - Pocket ID r3: positive control이 수정판에서 실패했다. top-1 target을 빨리 찾은 대신 test의 positive control을 충분히 검증하지 않았다.
+   - Vikunja r2: `docker`를 직접 호출해 audit violation이 났다. Jev ranking과 무관한 harness 경계 문제지만, 그 run은 invalid가 됐다.
+5. **비용/valid는 거의 tie다.** vanilla는 12/12 valid, unit-Jev는 10/12 valid였다. 전체 시도 비용을 valid 수로 나누면 $2.574 vs $2.511로 차이가 2.5%뿐이다. “싸다”는 성공 run만 보면 크지만, 실패 비용을 포함하면 이득이 줄어든다.
+
+따라서 Stage 0의 진짜 병목은 **ranker 비용이 아니라 verification/test authoring과 harness boundary**다. Stage 1 전에 이 두 가지를 고쳐야 한다.
+
 ## 6. 이 결과가 나오면 제품을 단순화할 것인가
 
 다음 중 하나라도 관측되면 Jev를 기본 제품에서 빼는 것을 진지하게 검토한다.
