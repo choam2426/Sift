@@ -95,6 +95,41 @@ func TestApplyRemovesEmptiedParent(t *testing.T) {
 	}
 }
 
+func TestStripRemovesOrphanedHelpers(t *testing.T) {
+	dir := t.TempDir()
+	src := `package api
+
+func TestOwner(t *testing.T) { ownerFixture(t) }
+
+func TestOther(t *testing.T) { shared(t) }
+
+func ownerFixture(t *testing.T) { deepHelper() }
+
+func deepHelper() {}
+
+func shared(t *testing.T) {}
+
+func alreadyUnused() {}
+`
+	_ = os.WriteFile(filepath.Join(dir, "a_test.go"), []byte(src), 0o644)
+	removed, err := strip(dir, []string{"TestOwner"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range removed {
+		got = append(got, r.Name)
+	}
+	sort.Strings(got)
+	if strings.Join(got, ",") != "TestOwner,deepHelper,ownerFixture" {
+		t.Fatalf("removed %v", got)
+	}
+	out, _ := os.ReadFile(filepath.Join(dir, "a_test.go"))
+	if !strings.Contains(string(out), "func alreadyUnused()") || !strings.Contains(string(out), "func shared(") {
+		t.Fatalf("kept code was removed:\n%s", out)
+	}
+}
+
 func TestApplyKeepsValidGo(t *testing.T) {
 	for _, c := range fileCandidates("api/api.go", []byte(fixture)) {
 		dir := t.TempDir()

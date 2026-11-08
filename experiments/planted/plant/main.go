@@ -609,9 +609,66 @@ type Removed struct {
 	Recv string `json:"recv,omitempty"`
 }
 
+// identCounts counts identifier occurrences by name in all Go files of dir.
+func identCounts(dir string) map[string]int {
+	counts := map[string]int{}
+	files, _ := filepath.Glob(filepath.Join(dir, "*.go"))
+	for _, path := range files {
+		f, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			continue
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			if id, ok := n.(*ast.Ident); ok {
+				counts[id.Name]++
+			}
+			return true
+		})
+	}
+	return counts
+}
+
 // strip deletes test functions or suite methods with the given names, with
-// their doc comments, from the *_test.go files of one directory.
+// their doc comments, from the *_test.go files of one directory. Unexported
+// test helpers that only the deleted code used are deleted too: an unused
+// helper about the removed behavior would point at the mutation.
 func strip(dir string, names []string) ([]Removed, error) {
+	before := identCounts(dir)
+	removed, err := stripOnce(dir, names)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		after := identCounts(dir)
+		var dead []string
+		files, _ := filepath.Glob(filepath.Join(dir, "*_test.go"))
+		for _, path := range files {
+			f, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			if err != nil {
+				continue
+			}
+			for _, d := range f.Decls {
+				fd, ok := d.(*ast.FuncDecl)
+				if !ok || fd.Name.IsExported() || fd.Name.Name == "init" {
+					continue
+				}
+				if after[fd.Name.Name] == 1 && before[fd.Name.Name] > 1 {
+					dead = append(dead, fd.Name.Name)
+				}
+			}
+		}
+		if len(dead) == 0 {
+			return removed, nil
+		}
+		more, err := stripOnce(dir, dead)
+		if err != nil {
+			return nil, err
+		}
+		removed = append(removed, more...)
+	}
+}
+
+func stripOnce(dir string, names []string) ([]Removed, error) {
 	want := map[string]bool{}
 	for _, n := range names {
 		if n = strings.TrimSpace(n); n != "" {
