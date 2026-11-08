@@ -3,6 +3,7 @@
 import pathlib, sys, tempfile, unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import analyze
 import case as case_mod
 import harness
 import rank
@@ -61,6 +62,26 @@ class RankTest(unittest.TestCase):
                  {'target': 'b.go', 'text': 'func checkAuthorization(caller) { if !caller.CanAccess(resource) { deny() } }'}]
         s = rank.bm25(units, rank.QUESTION)
         self.assertGreater(s[1], s[0])
+
+
+class AnalyzeTest(unittest.TestCase):
+    def test_ratio_uses_mean_cost_including_invalid_runs(self):
+        cases = {'c1': {'vanilla': [{'cost': 4.0}, {'cost': 2.0}], 'rank-jev': [{'cost': 1.5}, {'cost': 1.5}]}}
+        self.assertAlmostEqual(analyze.ratio(cases, 'rank-jev', 'vanilla')['c1'], 0.5)
+
+    def test_verdict(self):
+        self.assertEqual(analyze.verdict(0.8, 0.95, 0.90), 'supported')
+        self.assertEqual(analyze.verdict(0.8, 1.05, 0.90), 'inconclusive')
+        self.assertEqual(analyze.verdict(1.0, 1.2, 0.90), 'refuted')
+
+    def test_bootstrap_moves_repo_cases_together(self):
+        ratios = {'a1': 0.5, 'a2': 0.5, 'b1': 2.0}
+        lo, hi = analyze.boot_geomean(ratios, {'a1': 'a', 'a2': 'a', 'b1': 'b'})
+        self.assertLessEqual(lo, 0.5 + 1e-9)
+        self.assertGreaterEqual(hi, 2.0 - 1e-9)
+
+    def test_slope(self):
+        self.assertAlmostEqual(analyze.slope([(0, 0), (1, -1), (2, -2)]), -1.0)
 
 
 if __name__ == '__main__':

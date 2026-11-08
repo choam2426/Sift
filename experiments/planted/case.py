@@ -158,9 +158,12 @@ def importers(name, pkg):
     for path, parts in rows.items():
         if path == me or (parts[5] == '0' and parts[6] == '0'):
             continue
+        rel = str(pathlib.PurePosixPath(parts[1]).relative_to('/src'))
+        if re.search(r'(^|/)(e2e|integration)(/|$)', rel):
+            continue  # need a cluster or a configured server; the agent cannot run them either
         test_imports = set(parts[3].split(',')) | set(parts[4].split(','))
         if me in deps[path] or me in test_imports or any(me in deps.get(t, ()) for t in test_imports):
-            out.append(str(pathlib.PurePosixPath(parts[1]).relative_to('/src')))
+            out.append(rel)
     top = pkg.split('/')[0]
     return me, sorted(out, key=lambda d: (d.split('/')[0] != top, d))
 
