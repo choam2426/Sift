@@ -1,0 +1,9 @@
+{
+  "gotify": {"url": "https://github.com/gotify/server.git", "commit": "dd06dc77190696e93d3297b9a733711516fb17d9", "date": "2026-10-25", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
+  "pocketbase": {"url": "https://github.com/pocketbase/pocketbase.git", "commit": "7f2773ec234b62d0b80ca47c508397cb3d0da3ea", "date": "2026-10-26", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
+  "memos": {"url": "https://github.com/usememos/memos.git", "commit": "88a20fefdb20962558aa8db04d5ba068aac201e8", "date": "2026-11-06", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
+  "authelia": {"url": "https://github.com/authelia/authelia.git", "commit": "32b0bdac395efc707bc098757afa232177965736", "date": "2026-11-08", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
+  "argo-cd": {"url": "https://github.com/argoproj/argo-cd.git", "commit": "cfb8954fbc5a5de1178291204663cfea682b2a44", "date": "2026-11-08", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
+  "gitea": {"url": "https://github.com/go-gitea/gitea.git", "commit": "edebfaa12516a140d7ee3fcbaf25a6a1cc2cdb76", "date": "2026-11-08", "image": "golang:1.27", "seed": "phase2-2026-11-08", "mem": "3500m"},
+  "grafana": {"url": "https://github.com/grafana/grafana.git", "commit": "84cd7c5c0521d205d95a4987d6e545996d729975", "date": "2026-11-08", "image": "golang:1.27", "seed": "phase2-2026-11-08", "goflags": "", "mem": "3500m"}
+}

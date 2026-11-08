@@ -7,3 +7,4 @@ experiments/archive/*/runs/
 experiments/runs/
 __pycache__/
 runs/
+experiments/planted/plant/plant-linux
