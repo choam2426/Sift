@@ -125,12 +125,12 @@ python3 experiments/logic-ranker/e2e/e2e.py teardown --workspace <workspace>
 - Mythos 5.1과 GPT-6 Astra 리뷰가 둘 다 **REVISE**를 냈다. middleware 누락, Jev 질문 비대칭, coverage gate 미흡, publication date 누락, budget/semantic-review 문제가 P0였다.
 - P0 수정: `Use` middleware, root router, Echo handler 순서, path join, handler-before-middleware, golden fixture, coverage gate, 질문 대칭, 결합 상한, audit 무효화, 실제 decoy, panic reject, semantic adjudicate.
 - SSA call-graph 보강으로 OpenList는 `GetSharingUnwrapPath`까지 bundle에 포함해 coverage gate를 통과했다. Semaphore는 OSS `AddRole`이 404 stub이라 제외했다. 현재 post-cutoff 통과 사례는 **OpenList 1개**다.
-- 따라서 8개 confirmatory 세트는 아직 없다. `eligible=true`인 사례는 없고, oracle 함수를 포함하는 추출 방식과 pool 확장 전에는 실행하지 않는다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
+- 따라서 8개 confirmatory 세트는 구성하지 않았다. 자세한 내용은 [ADR 0008](../../../docs/adr/0008-held-out-case-pool-and-route-coverage-gate.md).
 
 ## Stage 0 unit-level arm
 
 `--arm jev-unit`은 file-level unit bundle(`units.jsonl`)과 Jev guide를 제공한다. `extract_units`는 `-packages`가 비어 있으면 모든 non-test package를 포함하고, `file_units.py`가 함수를 source file 단위로 묶는다. 이 arm은 route-index ablation과 별도로, `vanilla` vs `vanilla + Jev package` 제품 비교의 treatment다.
 
-## 다음
+## Stage 0 결과와 종료
 
-개발 사례 4개를 마쳤다. blind held-out 사례를 선정하고, 질문·K·run 수를 결과와 무관하게 pre-register한 뒤 confirmatory 규모를 정한다.
+`vanilla` vs `jev-unit`을 개발 사례 4개에서 arm당 3회 실행했다. 비용 비율 기하평균 0.843, valid 12/12 대 10/12, valid finding당 비용 $2.574 대 $2.511이었다. held-out 사례는 사용하지 않았다. 2026-11-08에 연구를 마쳤다. 분석은 [제품 결정 메모](../../../docs/jev-package-decision-memo.md), 최종 결론은 [ADR 0009](../../../docs/adr/0009-conclude-research-after-stage-0.md), 실행별 수치는 [`results/runs.csv`](../../../results/runs.csv)에 있다.

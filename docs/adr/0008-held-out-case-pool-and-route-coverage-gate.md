@@ -1,7 +1,7 @@
 # ADR 0008: held-out 사례는 oracle과 route coverage를 모두 통과해야 한다
 
 - 날짜: 2026-10-21
-- 상태: **REVISE, P0 수정 완료, 재리뷰 대기, 사례 pool 부족**. Mythos 5.1과 GPT-6 Astra가 REVISE를 냈고, P0 수정과 post-cutoff filter를 반영했다. 8개 confirmatory 세트는 아직 확정하지 못했다.
+- 상태: **종료.** Mythos 5.1과 GPT-6 Astra의 REVISE에 따라 P0를 수정하고 post-cutoff filter를 적용했다. 기준을 모두 통과한 held-out 사례는 OpenList 하나였고, 8개 confirmatory 세트는 구성하지 않았다. 이 결과가 연구 종료의 근거 중 하나다([ADR 0009](0009-conclude-research-after-stage-0.md)).
 - 관련: [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md)
 
 ## 맥락
@@ -152,18 +152,16 @@ AST route extraction alone cannot see the authorization decision when it sits be
   - **C. intervention 변경**: custom router 사례에는 route index 대신 function-unit index를 쓰는 별도 실험을 설계한다. 기존 3-arm과 직접 비교하지 않는다.
 - 권고: **A를 먼저** 하고, 8개가 계속 안 되면 B로 범위를 줄이거나 C를 별도 실험으로 분리한다.
 
-## 아직 남은 일
+## 종료 시점의 결과
 
-- oracle 함수를 포함하는 decision-path 추출(깊은 call graph 또는 fix-independent unit index)
-- P0 수정 후 Mythos/Astra 재리뷰와 finding-level semantic gate 보완
-- Authorizer target truncation, Cloudreve fix commit 확인
-- runtime route recall 검사와 exact handler identity fixture
-- 8개 post-cutoff 사례 확보
-- 8개 eligible 사례 확정 후 pre-registration 동결
+- SSA call graph 보강으로 오라클 함수를 bundle에 포함하는 추출은 OpenList에서 확인했다.
+- 후보 pool 확장(A)은 사례 공급 자체가 별도 연구 과제라는 판단으로 진행하지 않았다.
+- 대신 비교 설계를 `vanilla` vs `vanilla + Jev package` 2-arm으로 바꾸고, target coverage를 사례 선정 기준이 아니라 진단 지표로 내렸다([제품 결정 메모](../jev-package-decision-memo.md)).
+- 그 설계로 개발 사례 4개에서 Stage 0를 실행한 뒤 연구를 마쳤다([ADR 0009](0009-conclude-research-after-stage-0.md)).
 
-## 확정 전 pre-registration
+## 확정 전 pre-registration (실행하지 않음)
 
-사례가 eligible이 된 뒤, 결과를 보기 전에 다음을 고정한다.
+3-arm confirmatory를 실행했다면 결과를 보기 전에 다음을 고정할 계획이었다. 연구 종료로 실행하지 않았다.
 
 - **Arm**: `vanilla`, `route-index`, `jev`. 같은 route bundle을 route-index와 jev에 제공한다.
 - **질문**: bug class별 generic 질문 하나. 사례별 oracle 질문은 쓰지 않는다.
@@ -180,7 +178,7 @@ AST route extraction alone cannot see the authorization decision when it sits be
 - **감사**: direct docker/network 호출은 그 run을 무효화해 censored로 기록한다. 자동 재실행으로 대체하지 않는다. 인프라 장애만 사전에 정한 1회 재실행을 허용하고, 모든 시도를 남긴다. workspace 내부 `../`는 수동 검토한다.
 - **오염**: `.git`·advisory·fix 이력을 제거하고 네트워크를 차단한다. post-cutoff만으로 오염이 없다고 주장하지 않는다.
 
-## 실행 전 gate
+## 실행 전 gate (실행하지 않음)
 
 1. 후보의 취약·수정 소스가 오프라인에서 빌드된다.
 2. oracle이 취약판에서 `--- FAIL:`로 실패하고 수정판에서 통과하며, decoy(무관한 변경)에서는 같은 실패가 재현된다.

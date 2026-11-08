@@ -1,8 +1,10 @@
 # Sift 연구 설계
 
-2026-10-19 기준 활성 설계. 합의의 이유와 범위는 [ADR 0001](docs/adr/0001-jev-collaboration-research-charter.md)과 [ADR 0006](docs/adr/0006-logic-bug-ranker-experiment.md)에 기록한다. 아직 정하지 않은 방법·제품 형태는 여기서 요구사항으로 만들지 않는다.
+> **연구 종료(2026-11-08).** 이 문서는 2026-10-19 시점의 설계 기록이다. 이후 비교 설계는 `vanilla` vs `vanilla + Jev package` 2-arm으로 바뀌었고([제품 결정 메모](docs/jev-package-decision-memo.md)), 최종 결론은 [ADR 0009](docs/adr/0009-conclude-research-after-stage-0.md)에 있다.
 
-## 현재 활성 실험 (2026-10-19)
+2026-10-19 기준 설계 기록. 합의의 이유와 범위는 [ADR 0001](docs/adr/0001-jev-collaboration-research-charter.md)과 [ADR 0006](docs/adr/0006-logic-bug-ranker-experiment.md)에 기록한다. 아직 정하지 않은 방법·제품 형태는 여기서 요구사항으로 만들지 않는다.
+
+## 마지막 활성 실험 (2026-10-19 기준)
 
 - **범위:** Go 인가/접근 제어 로직 버그. C/C++ 메모리 안전성 testbed는 파일럿·대조 자료로 보존한다.
 - **Jev의 역할:** 후보 ranker. `jev-1.14.0`의 Noul 점수로 조사 우선순위를 정하며, 검증·설명·위치를 맡기지 않는다.

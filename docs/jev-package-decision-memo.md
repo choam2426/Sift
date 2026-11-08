@@ -1,8 +1,8 @@
 # Jev package 제품 결정 메모
 
-- 날짜: 2026-10-21
-- 상태: **초안, 결정 전**. 이 문서는 실행 승인이 아니라 결정 기준을 맞추기 위한 메모다.
-- 관련: [ADR 0007](adr/0007-three-arm-ranker-evaluation-after-independent-review.md), [ADR 0008](adr/0008-held-out-case-pool-and-route-coverage-gate.md)
+- 날짜: 2026-10-21 작성, 2026-11-08 종료
+- 상태: **종료.** Stage 0까지 실행하고 연구를 마쳤다. Stage 1·2는 실행하지 않았다. 최종 결정과 결론은 [§8](#8-최종-결정)과 [ADR 0009](adr/0009-conclude-research-after-stage-0.md)에 있다.
+- 관련: [ADR 0007](adr/0007-three-arm-ranker-evaluation-after-independent-review.md), [ADR 0008](adr/0008-held-out-case-pool-and-route-coverage-gate.md), [ADR 0009](adr/0009-conclude-research-after-stage-0.md)
 
 ## 1. 이번에 결정할 것
 
@@ -17,7 +17,7 @@
 
 이 메모는 “Jev가 좋은가?”가 아니라 **“다음 개발 사이클에 무엇을 넣을 것인가”**를 결정하기 위한 것이다.
 
-## 2. 지금까지의 증거
+## 2. 메모 작성 시점(2026-10-21)의 증거
 
 - 개발 사례 4개(Kite, Vikunja, Pocket ID, Arcane)는 결과가 이질적이다.
   - Vikunja: route-index가 vanilla보다 쌌고, Jev는 route-index와 거의 같았다.
@@ -82,7 +82,7 @@ Jev의 목표는 **취약 함수를 정확히 top-1에 올리는 것**이 아니
 - **Diagnostic only**: target file rank, oracle coverage, top-K hit. 이 값이 낮다고 Jev가 실패한 것도, 높다고 성공한 것도 아니다.
 - **Guardrail**: valid-find rate, rejection rate, audit violation. 탐색을 줄여도 검증 실패가 늘면 제품 이득이 아니다.
 - **Selection**: target coverage를 eligibility로 쓰지 않는다. coverage는 mediator/결과 변수로 기록한다.
-- Stage 0의 Arcane이 대표적이다. fix file rank는 39–41/264였지만 route registration file이 1/264였고, 총 탐색 비용은 19% 줄었다. Kite는 target rank가 낮고 vanilla가 이미 빨라 overhead가 됐다.
+- Stage 0의 Arcane이 대표적이다. fix file rank는 39–41/264였지만 route registration file이 1/264였고, 총 탐색 비용은 19% 줄었다. Kite는 진입점 파일이 3/112였지만 vanilla가 이미 짧게 끝나 overhead가 됐다.
 
 따라서 Stage 1에서 “target을 top-1에 올렸는가”를 최적화하지 않는다. **총 탐색 비용과 valid finding 비용이 줄었는가**를 본다.
 
@@ -117,7 +117,8 @@ Stage 1 결과에 대해:
 - 전체 시도 비용 / valid finding: vanilla **$2.574**, unit-Jev **$2.511**
 - 총 valid: vanilla **12/12**, unit-Jev **10/12**
 - unit-Jev 실패 2건: Vikunja r2 Docker audit violation, Pocket ID r3 rejected test(positive control이 수정판에서 실패)
-- target file의 unit rank: Pocket ID **1/127**, Vikunja **2–4/507**, Arcane **39–41/264**, Kite **76/112**
+- 수정 파일의 unit rank: Pocket ID **1/127**, Vikunja **2–4/507**, Arcane **39–41/264**, Kite **59–77/112**
+- 진입점 파일의 unit rank: Arcane `api/handlers/diagnostics.go` **1/264**, Kite `pkg/proxy/handler.go` **3/112**
 - Jev 자체 비용은 사례당 $0.009–$0.043로 작았다.
 
 해석:
@@ -133,15 +134,17 @@ Stage 1 결과에 대해:
 2. **target file이 top-K에 있는가가 탐색 비용을 좌우했다.**
    - Pocket ID: `internal/service/oidc_service.go` **1/127**. 세 실행 모두 top-1. unit-Jev가 23~49턴으로 vanilla 40~56턴보다 짧았다.
    - Vikunja: `pkg/models/kanban_task_bucket.go` **2–4/507**. top-10 안. 비용은 7.6% 낮았지만 vanilla도 이미 빨라 차이가 작았다.
-   - Kite: `pkg/kube/proxy.go` **59–77/112**. top-10 밖. unit-Jev는 `ls`/JEV/ranking을 읽는 overhead가 붙어 18~27턴으로 vanilla 15~21턴보다 많았다.
+   - Kite: 수정 파일 `pkg/kube/proxy.go`는 **59–77/112**였지만 진입점 `pkg/proxy/handler.go`는 **3/112**였다. Jev는 입구를 보여 줬다. 그러나 vanilla가 이미 15~21턴에 끝나는 사례라 줄일 탐색이 없었고, ranking을 읽는 overhead만 남아 unit-Jev는 18~27턴이었다.
    - Arcane: fix file `internal/auth/middleware.go`는 **39–41/264**였지만, **route registration file `api/handlers/diagnostics.go`가 1/264**였다. Jev가 route 문맥을 먼저 노출했고 agent가 auth middleware로 따라가 16~35턴으로 vanilla 23~45턴보다 짧았다.
-3. **Jev는 “정답 파일”보다 “결정 경로 입구”를 잘 찾았다.** Arcane이 대표적이다. fix file rank는 중간이었지만 pprof route/diagnostics가 top-1이라 탐색이 줄었다.
+3. **Jev는 “정답 파일”보다 “결정 경로 입구”를 잘 찾았다.** 네 사례 모두 수정 파일이나 진입점 파일이 top-4 안에 있었다. 이득의 크기는 순위보다 **vanilla의 탐색이 원래 얼마나 길었는가**에 따라 갈렸다. Pocket ID(vanilla 평균 49턴)는 34% 줄었고 Kite(vanilla 평균 18턴)는 오히려 늘었다.
 4. **validity 손실은 ranking 실패가 아니라 test construction/경계 문제다.**
    - Pocket ID r3: positive control이 수정판에서 실패했다. top-1 target을 빨리 찾은 대신 test의 positive control을 충분히 검증하지 않았다.
    - Vikunja r2: `docker`를 직접 호출해 audit violation이 났다. Jev ranking과 무관한 harness 경계 문제지만, 그 run은 invalid가 됐다.
 5. **비용/valid는 거의 tie다.** vanilla는 12/12 valid, unit-Jev는 10/12 valid였다. 전체 시도 비용을 valid 수로 나누면 $2.574 vs $2.511로 차이가 2.5%뿐이다. “싸다”는 성공 run만 보면 크지만, 실패 비용을 포함하면 이득이 줄어든다.
 
-따라서 Stage 0의 진짜 병목은 **ranker 비용이 아니라 verification/test authoring과 harness boundary**다. Stage 1 전에 이 두 가지를 고쳐야 한다.
+따라서 Stage 0의 진짜 병목은 **ranker 비용이 아니라 verification/test authoring과 harness boundary**다.
+
+진입점 파일은 결과를 본 뒤 사람이 지정한 진단용 표시다. 사전에 정한 지표가 아니다. 순위 원자료는 `results/stage0-jev-file-ranks.csv`에 있다.
 
 ## 6. 이 결과가 나오면 제품을 단순화할 것인가
 
@@ -153,25 +156,25 @@ Stage 1 결과에 대해:
 - rejection/verification burden이 커져 사람의 시간이 줄지 않는다.
 - unit bundle 생성 비용이 절감액을 잠식한다.
 
-## 7. 아직 모르는 것
+## 7. 이 연구가 답하지 않은 것
 
-- generic unit bundle이 실제 repo 규모에서 얼마나 큰가. Jev 비용·latency가 제품화 가능한가.
-- 사용자는 비용, 성공 확률, latency, 검토 부담 중 무엇을 가장 중요하게 보는가.
-- 제품의 support boundary를 어디까지로 볼 것인가(Go version, framework, repo size).
-- post-cutoff 독립 사례를 8개 이상 확보할 수 있는가.
-- Docker isolation, finding-level adjudication, first-submission cost timestamp를 닫을 수 있는가.
+아래는 이 연구의 범위 밖으로 남긴 질문이다. 후속 연구를 한다면 여기서 시작한다.
 
-## 8. 다음 행동
+- generic unit bundle이 수천 파일 규모의 repo에서도 탐색을 줄이는가. Jev 비용·latency는 제품화 가능한 수준인가. Stage 0의 최대 bundle은 507개 파일이었다.
+- 사용자는 비용·성공 확률·latency·검토 부담 중 무엇을 가장 중요하게 보는가.
+- 학습 기준일 이후의 독립 사례 8개 이상에서도 같은 방향이 나오는가. 기준을 모두 통과한 held-out 사례는 OpenList 하나뿐이었다([ADR 0008](adr/0008-held-out-case-pool-and-route-coverage-gate.md)).
+- index-only arm과 비교할 때 Jev ranking 자체의 증분 효과가 있는가.
 
-- [ ] 이 메모의 결정·threshold를 팀이 합의
-- [ ] Stage 0: 새 package를 개발 사례에서 end-to-end 실행
-- [ ] Stage 0 결과로 treatment freeze
-- [ ] harness P0: Docker broker, finding-level adjudication, submission cost snapshot
-- [ ] case supply: post-cutoff 8개 독립 사례 확보
-- [ ] Stage 1 decision pilot
-- [ ] Stage 2 필요 여부 결정
+## 8. 최종 결정
 
-## 9. 하지 않을 것
+**D. 이 연구 범위에서는 제품화하지 않고 연구를 마친다.**
+
+- **A(Jev package 채택)는 정당화되지 않는다.** 개발 사례 4개의 탐색적 결과이고, valid finding당 비용 차이는 2.5%에 그쳤다.
+- **B(index만 채택)는 부분적으로 지지된다.** Vikunja route 실험에서 index만으로 비용이 38% 줄었다. 그러나 사례가 하나다.
+- **C(verification 투자)가 후속 작업의 우선순위다.** Stage 0에서 Jev arm의 손실은 탐색이 아니라 test 작성 실패와 경계 위반에서 나왔다.
+- Stage 1·2를 실행하지 않는 이유: 기준을 통과한 held-out 사례가 8개에 한참 못 미쳤고, Stage 0에서 확인한 병목(test 검증)이 Jev ranking과 별개의 문제였다.
+
+## 9. 지킨 원칙
 
 - held-out case를 treatment 디버깅에 쓰지 않는다.
 - oracle coverage를 eligibility로 쓰지 않는다.

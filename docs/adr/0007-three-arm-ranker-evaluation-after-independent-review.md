@@ -1,7 +1,7 @@
 # ADR 0007: Jev ranker는 3-arm으로 평가하고, 질문·K·사례를 동결한다
 
 - 날짜: 2026-10-19
-- 상태: 채택. [ADR 0006](0006-logic-bug-ranker-experiment.md)의 2-arm e2e 계획을 대체한다.
+- 상태: 채택. [ADR 0006](0006-logic-bug-ranker-experiment.md)의 2-arm e2e 계획을 대체한다. 2026-11-08 연구 종료: 최종 결론은 [ADR 0009](0009-conclude-research-after-stage-0.md).
 - 관련: [ADR 0001](0001-jev-collaboration-research-charter.md), [ADR 0003](0003-cost-as-matched-budget-and-first-run-measures-consumption.md), [ADR 0006](0006-logic-bug-ranker-experiment.md)
 
 ## 맥락
@@ -157,7 +157,9 @@ Arcane는 `AdminRequired` 그룹 앞에서 environment token이 관리자 권한
 - Jev는 service 내부 상태 사례에서 가장 유망했지만, 후보를 잘못 고르거나 테스트를 과도하게 쓰는 실패가 있었다. **ranker는 발견을 대체하지 않고, 검증·테스트 작성 비용을 없애지 않는다.**
 - Pocket ID의 Jev clean r4는 4회 시도 중 하나다. 시도 비용을 모두 합치면 $9.740으로, 유효 발견 2건당 $4.87, clean 유효 발견 1건당 $9.74다.
 
-## 다음
+## 당시 계획한 다음 단계
+
+1~4는 실행했다. 5~6의 blind held-out 선정은 기준을 통과한 사례가 하나뿐이어서 하지 못했다([ADR 0008](0008-held-out-case-pool-and-route-coverage-gate.md)). 이후 비교는 2-arm으로 바뀌었고 연구는 [ADR 0009](0009-conclude-research-after-stage-0.md)로 마쳤다.
 
 1. `experiments/logic-ranker/e2e`를 `vanilla`/`route-index`/`jev` 3-arm과 case config로 일반화한다.
 2. generic 질문·K·arms·metric·run count를 pre-register한다.

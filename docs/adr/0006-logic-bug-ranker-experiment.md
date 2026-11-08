@@ -1,7 +1,7 @@
 # ADR 0006: 활성 실험은 Go 인가 로직 버그의 Jev ranker다
 
 - 날짜: 2026-10-19
-- 상태: Stage 1과 2-arm e2e 파일럿을 기록했다. 2-arm e2e는 독립 리뷰 후 [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md)의 3-arm 프로토콜로 대체한다. C/C++ testbed는 파일럿·대조로 보존한다.
+- 상태: Stage 1과 2-arm e2e 파일럿을 기록했다. 2-arm e2e는 독립 리뷰 후 [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md)의 3-arm 프로토콜로 대체한다. C/C++ testbed는 파일럿·대조로 보존한다. 2026-11-08 연구 종료: 최종 결론은 [ADR 0009](0009-conclude-research-after-stage-0.md).
 - 관련: [ADR 0001](0001-jev-collaboration-research-charter.md), [ADR 0003](0003-cost-as-matched-budget-and-first-run-measures-consumption.md), [ADR 0004](0004-measurement-cases-after-training-cutoff.md), [ADR 0005](0005-pinned-source-build-for-post-cutoff-cases.md)
 
 ## 맥락
@@ -67,7 +67,9 @@ Kite 한 사례로 순정과 Jev ranker를 각 1회 실행했다. 두 arm 모두
 
 Jev arm은 라우트 130개를 한 번 채점해 대상 `/namespaces/.../proxy/*path`를 top 1로 올렸다. 총비용 차이는 $0.063(4.4%)으로 작았다. Kite는 국소적이고 명시적인 가드라 순정도 빠르게 찾는 ceiling case이므로, 이 결과를 Jev의 일반 효과로 해석하지 않는다.
 
-## 다음
+## 당시 계획한 다음 단계
+
+1~2, 4는 실행했다. 3은 Stage 0에서 arm당 3회로 정했다. 경과와 결론은 [ADR 0007](0007-three-arm-ranker-evaluation-after-independent-review.md)~[0009](0009-conclude-research-after-stage-0.md)에 있다.
 
 1. Pocket ID(refresh state machine)와 Vikunja(cross-tenant IDOR)로 end-to-end를 확장한다. Kite는 ceiling/control로 둔다.
 2. Jev arm의 `routes.jsonl` 생성을 `extract_routes`로 자동화하고, 질문 템플릿을 사전 고정한다.

@@ -64,10 +64,8 @@ python3 experiments/logic-ranker/summarize.py --kind routes --data-root ~/sift-r
 
 Kite 파일럿 harness와 결과는 [`e2e/`](e2e/README.md)에 있다. 순정 $1.436, Jev ranker $1.373(Jev $0.0245 포함), 둘 다 reproduced. Kite는 ceiling case라 작은 차이만 났다.
 
-## 다음
+## 이후 경과
 
-1. Pocket ID·Vikunja end-to-end, Arcane은 대조군
-2. `routes.jsonl` 자동 생성과 질문 템플릿 사전 고정
-3. 감사에서 workspace 내부 상대 경로와 실제 경계 이탈 구분
+Pocket ID·Vikunja·Arcane end-to-end, route 추출 자동화, SSA call graph 보강(`extract_calls/`), file 단위 unit 추출(`extract_units/`)까지 진행했다. 2026-11-08에 연구를 마쳤다. 최종 결론은 [ADR 0009](../../docs/adr/0009-conclude-research-after-stage-0.md), 실행별 결과는 [`results/`](../../results/)에 있다.
 
 원자료와 stage 1 기록: `~/sift-runs/notes/2026-10-19-stage1-ranker.md`, `~/sift-runs/measurements/jev-ranker-stage1/`.
