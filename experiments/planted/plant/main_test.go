@@ -1,0 +1,78 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+)
+
+const fixture = `package api
+
+func Update(ctx *Context, repo *Repo) {
+	if repo == nil || !ctx.Perm.CanWrite(repo) {
+		ctx.Forbidden()
+		return
+	}
+	// owners only
+	if !ctx.IsOwner {
+		ctx.NotFound()
+		return
+	}
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return
+	}
+	items := store.Find(ctx, &store.FindOptions{
+		OwnerID: ctx.Doer.ID,
+	})
+	_ = items
+}
+
+func Routes(m *Router) {
+	m.Post("/new", reqToken(), reqRepoWriter(unitWiki), handler)
+}
+`
+
+func ops(cs []Candidate) []string {
+	var out []string
+	for _, c := range cs {
+		out = append(out, c.Op+" "+strings.TrimSpace(c.Removed))
+	}
+	sort.Strings(out)
+	return out
+}
+
+func TestCandidates(t *testing.T) {
+	got := ops(fileCandidates("api/api.go", []byte(fixture)))
+	want := []string{
+		"cond-weaken || !ctx.Perm.CanWrite(repo)",
+		"guard-delete // owners only\n\tif !ctx.IsOwner {\n\t\tctx.NotFound()\n\t\treturn\n\t}",
+		"guard-delete if repo == nil || !ctx.Perm.CanWrite(repo) {\n\t\tctx.Forbidden()\n\t\treturn\n\t}",
+		"middleware-delete reqRepoWriter(unitWiki),",
+		"middleware-delete reqToken(),",
+		"scope-delete OwnerID: ctx.Doer.ID",
+	}
+	if strings.Join(got, "\n---\n") != strings.Join(want, "\n---\n") {
+		t.Fatalf("candidates:\n%s\nwant:\n%s", strings.Join(got, "\n---\n"), strings.Join(want, "\n---\n"))
+	}
+}
+
+func TestApplyKeepsValidGo(t *testing.T) {
+	for _, c := range fileCandidates("api/api.go", []byte(fixture)) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "api", "api.go")
+		_ = os.MkdirAll(filepath.Dir(path), 0o755)
+		_ = os.WriteFile(path, []byte(fixture), 0o644)
+		if _, err := apply(dir, c.ID); err != nil {
+			t.Fatalf("%s: %v", c.ID, err)
+		}
+		out, _ := os.ReadFile(path)
+		if strings.Contains(string(out), strings.TrimSpace(c.Removed)) {
+			t.Errorf("%s: removed text still present", c.ID)
+		}
+		if c.Op == "scope-delete" && !strings.Contains(string(out), "&store.FindOptions{})") {
+			t.Errorf("scope-delete left a dangling comma:\n%s", out)
+		}
+	}
+}

@@ -1,5 +1,5 @@
 {
-  "gotify": {"url": "https://github.com/gotify/server.git", "commit": "dd06dc77190696e93d3297b9a733711516fb17d9", "date": "2026-10-25", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
+  "gotify": {"url": "https://github.com/gotify/server.git", "commit": "dd06dc77190696e93d3297b9a733711516fb17d9", "date": "2026-10-25", "image": "golang:1.27", "seed": "phase2-2026-11-08", "placeholders": ["ui/build/index.html"]},
   "pocketbase": {"url": "https://github.com/pocketbase/pocketbase.git", "commit": "7f2773ec234b62d0b80ca47c508397cb3d0da3ea", "date": "2026-10-26", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
   "memos": {"url": "https://github.com/usememos/memos.git", "commit": "88a20fefdb20962558aa8db04d5ba068aac201e8", "date": "2026-11-06", "image": "golang:1.27", "seed": "phase2-2026-11-08"},
   "authelia": {"url": "https://github.com/authelia/authelia.git", "commit": "32b0bdac395efc707bc098757afa232177965736", "date": "2026-11-08", "image": "golang:1.27", "seed": "phase2-2026-11-08"},

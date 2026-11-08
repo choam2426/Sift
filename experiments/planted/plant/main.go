@@ -2,6 +2,8 @@
 //
 //	plant list  -root DIR            # JSONL candidates on stdout
 //	plant apply -root DIR -id ID     # rewrite one file in place, JSON summary on stdout
+//	plant strip -dir DIR -names A,B  # delete test funcs/methods by name from DIR/*_test.go
+//	plant dropimport -file F -paths P,Q
 //
 // A candidate id is "<op>:<file>:<start>-<end>" with byte offsets into the
 // original file, so it is stable for a fixed revision.
@@ -62,8 +64,24 @@ func main() {
 	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
 	root := fs.String("root", ".", "module root")
 	id := fs.String("id", "", "candidate id (apply)")
+	dir := fs.String("dir", "", "package directory (strip)")
+	namesFlag := fs.String("names", "", "comma-separated func or method names (strip)")
+	file := fs.String("file", "", "Go file (dropimport)")
+	paths := fs.String("paths", "", "comma-separated import paths (dropimport)")
 	_ = fs.Parse(os.Args[2:])
 	switch os.Args[1] {
+	case "strip":
+		removed, err := strip(*dir, strings.Split(*namesFlag, ","))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		_ = json.NewEncoder(os.Stdout).Encode(removed)
+	case "dropimport":
+		if err := dropImports(*file, strings.Split(*paths, ",")); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "list":
 		enc := json.NewEncoder(os.Stdout)
 		for _, c := range list(*root) {
@@ -511,6 +529,14 @@ func apply(root, id string) (Candidate, error) {
 	if found == nil {
 		return Candidate{}, fmt.Errorf("candidate %s not found (source changed?)", id)
 	}
+	if parts[0] == "scope-delete" {
+		// a lone keyed element keeps its trailing comma in the id range; drop it
+		before := strings.TrimRight(string(src[:s]), " \t\n")
+		after := strings.TrimLeft(string(src[e:]), " \t\n")
+		if strings.HasSuffix(before, "{") && strings.HasPrefix(after, ",") {
+			e = len(src) - len(after) + 1
+		}
+	}
 	out := append(append([]byte{}, src[:s]...), src[e:]...)
 	if parts[0] == "guard-delete" || parts[0] == "middleware-delete" && strings.HasSuffix(string(src[s:e]), "\n") {
 		out = tidyBlankLines(out, s)
@@ -526,6 +552,131 @@ func apply(root, id string) (Candidate, error) {
 		return Candidate{}, err
 	}
 	return *found, nil
+}
+
+type Removed struct {
+	File string `json:"file"`
+	Name string `json:"name"`
+	Recv string `json:"recv,omitempty"`
+}
+
+// strip deletes test functions or suite methods with the given names, with
+// their doc comments, from the *_test.go files of one directory.
+func strip(dir string, names []string) ([]Removed, error) {
+	want := map[string]bool{}
+	for _, n := range names {
+		if n = strings.TrimSpace(n); n != "" {
+			want[n] = true
+		}
+	}
+	files, _ := filepath.Glob(filepath.Join(dir, "*_test.go"))
+	sort.Strings(files)
+	removed := []Removed{}
+	for _, path := range files {
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, path, src, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		type span struct{ s, e int }
+		var spans []span
+		for _, d := range f.Decls {
+			fd, ok := d.(*ast.FuncDecl)
+			if !ok || !want[fd.Name.Name] {
+				continue
+			}
+			start := fd.Pos()
+			if fd.Doc != nil {
+				start = fd.Doc.Pos()
+			}
+			s := fset.Position(start).Offset
+			e := fset.Position(fd.End()).Offset
+			s = bytes.LastIndexByte(src[:s], '\n') + 1
+			if i := bytes.IndexByte(src[e:], '\n'); i >= 0 {
+				e += i + 1
+			} else {
+				e = len(src)
+			}
+			spans = append(spans, span{s, e})
+			r := Removed{File: filepath.Base(path), Name: fd.Name.Name}
+			if fd.Recv != nil && len(fd.Recv.List) > 0 {
+				r.Recv = typeName(fd.Recv.List[0].Type)
+			}
+			removed = append(removed, r)
+		}
+		if len(spans) == 0 {
+			continue
+		}
+		out := []byte{}
+		prev := 0
+		for _, sp := range spans {
+			out = append(out, src[prev:sp.s]...)
+			prev = sp.e
+		}
+		out = append(out, src[prev:]...)
+		if f2, err := format.Source(out); err == nil {
+			out = f2
+		}
+		if err := os.WriteFile(path, out, 0o644); err != nil {
+			return nil, err
+		}
+	}
+	return removed, nil
+}
+
+// dropImports removes import specs by path; used after strip when the
+// compiler reports "imported and not used".
+func dropImports(path string, paths []string) error {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	drop := map[string]bool{}
+	for _, p := range paths {
+		drop[strings.TrimSpace(p)] = true
+	}
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, path, src, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	type span struct{ s, e int }
+	var spans []span
+	for _, imp := range f.Imports {
+		p, _ := strconv.Unquote(imp.Path.Value)
+		if !drop[p] {
+			continue
+		}
+		s := fset.Position(imp.Pos()).Offset
+		e := fset.Position(imp.End()).Offset
+		ls := bytes.LastIndexByte(src[:s], '\n') + 1
+		le := e
+		if i := bytes.IndexByte(src[e:], '\n'); i >= 0 {
+			le = e + i + 1
+		}
+		if strings.TrimSpace(string(src[ls:s])) == "" && strings.TrimSpace(string(src[e:le])) == "" {
+			s, e = ls, le
+		} else if strings.HasPrefix(strings.TrimSpace(string(src[ls:s])), "import") {
+			s, e = ls, le // single-line `import "x"`
+		}
+		spans = append(spans, span{s, e})
+	}
+	sort.Slice(spans, func(i, j int) bool { return spans[i].s < spans[j].s })
+	out := []byte{}
+	prev := 0
+	for _, sp := range spans {
+		out = append(out, src[prev:sp.s]...)
+		prev = sp.e
+	}
+	out = append(out, src[prev:]...)
+	if f2, err := format.Source(out); err == nil {
+		out = f2
+	}
+	return os.WriteFile(path, out, 0o644)
 }
 
 // tidyBlankLines removes a blank line left at the splice point when it would
