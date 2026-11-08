@@ -19,8 +19,10 @@ def load(root):
     rows = []
     for path in sorted(glob.glob(os.path.join(os.path.expanduser(root), '**', 'control', 'runs', '*', 'run.json'), recursive=True)):
         r = json.loads(pathlib.Path(path).read_text())
+        if r.get('infra_abort'):
+            continue  # redone under the same conditions (ADR 0010)
         rows.append({'case': r['case'], 'arm': r['arm'], 'cost': r['total_cost_usd'], 'valid': bool(r['valid']),
-                     'turns': r.get('num_turns'), 'wall': r.get('elapsed_seconds'),
+                     'turns': r.get('num_turns'), 'wall': (r.get('elapsed_seconds') or 0) + (r.get('ranking_seconds') or 0),
                      'first_read': r.get('mutated_first_read_turn'), 'path': path})
     return rows
 

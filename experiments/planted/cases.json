@@ -1,0 +1,18 @@
+[
+  {"case": "pilot-gitea", "role": "pilot", "repo": "gitea", "pool_rank": 12, "id": "guard-delete:services/issue/issue.go:10554-10703"},
+  {"case": "gitea-1", "role": "main", "repo": "gitea", "pool_rank": 213, "id": "guard-delete:routers/private/hook_pre_receive.go:4919-5094"},
+  {"case": "gitea-2", "role": "main", "repo": "gitea", "pool_rank": 260, "id": "cond-weaken:services/repository/collaboration.go:945-976"},
+  {"case": "pilot-grafana", "role": "pilot", "repo": "grafana", "pool_rank": 9, "id": "guard-delete:pkg/registry/apis/iam/user/validate.go:6280-6477"},
+  {"case": "grafana-1", "role": "main", "repo": "grafana", "pool_rank": 16, "id": "scope-delete:pkg/services/ngalert/api/api_ruler.go:12627-12660"},
+  {"case": "grafana-2", "role": "main", "repo": "grafana", "pool_rank": 20, "id": "scope-delete:pkg/services/ngalert/provisioning/alert_rules.go:14632-14658"},
+  {"case": "pilot-argocd", "role": "pilot", "repo": "argo-cd", "pool_rank": 3, "id": "guard-delete:server/application/application.go:88056-88225"},
+  {"case": "argocd-1", "role": "main", "repo": "argo-cd", "pool_rank": 10, "id": "guard-delete:server/extension/extension.go:24478-24680"},
+  {"case": "argocd-2", "role": "main", "repo": "argo-cd", "pool_rank": 13, "id": "guard-delete:pkg/apis/application/v1alpha1/app_project_types.go:18391-18762"},
+  {"case": "authelia-1", "role": "main", "repo": "authelia", "pool_rank": 12, "id": "guard-delete:internal/handlers/handler_oauth2_oidc_userinfo.go:3605-4094"},
+  {"case": "memos-1", "role": "main", "repo": "memos", "pool_rank": 1, "id": "scope-delete:server/api/space_service.go:17623-17648"},
+  {"case": "memos-2", "role": "main", "repo": "memos", "pool_rank": 193, "id": "guard-delete:server/api/upload_session.go:6304-6431"},
+  {"case": "gotify-1", "role": "main", "repo": "gotify", "pool_rank": 4, "id": "cond-weaken:api/message.go:11026-11070"},
+  {"case": "gotify-2", "role": "main", "repo": "gotify", "pool_rank": 5, "id": "guard-delete:auth/authentication.go:9227-9281"},
+  {"case": "pocketbase-1", "role": "main", "repo": "pocketbase", "pool_rank": 2, "id": "guard-delete:apis/record_crud.go:17964-18115"},
+  {"case": "pocketbase-2", "role": "main", "repo": "pocketbase", "pool_rank": 9, "id": "guard-delete:apis/realtime.go:26719-26844"}
+]

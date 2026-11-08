@@ -64,6 +64,19 @@ class RankTest(unittest.TestCase):
         self.assertGreater(s[1], s[0])
 
 
+class InfraAbortTest(unittest.TestCase):
+    def test_session_limit_is_infra(self):
+        main = {'is_error': True, 'terminal_reason': 'api_error', 'result': "You've hit your session limit · resets 8:40pm"}
+        self.assertIn('session limit', harness.infra_abort(main))
+
+    def test_normal_completion_is_not(self):
+        self.assertIsNone(harness.infra_abort({'is_error': False, 'terminal_reason': 'completed', 'result': 'done'}))
+
+    def test_budget_stop_is_not(self):
+        # hitting --max-budget-usd is the agent's outcome under the cap, not an infra failure
+        self.assertIsNone(harness.infra_abort({'is_error': True, 'subtype': 'error_max_budget_usd', 'terminal_reason': 'budget_exhausted', 'result': 'None'}))
+
+
 class AnalyzeTest(unittest.TestCase):
     def test_ratio_uses_mean_cost_including_invalid_runs(self):
         cases = {'c1': {'vanilla': [{'cost': 4.0}, {'cost': 2.0}], 'rank-jev': [{'cost': 1.5}, {'cost': 1.5}]}}

@@ -40,7 +40,7 @@ stage0-unit,pocketid,jev-unit,1,2.934,0.0093,2.9433,49,356.0,reproduced,accepted
 stage0-unit,pocketid,jev-unit,2,2.4852,0.0093,2.4945,23,301.5,reproduced,accepted,0,0,0,0,True,
 stage0-unit,pocketid,jev-unit,3,2.0927,0.0093,2.102,24,251.2,rejected,rejected,0,0,0,0,False,
 stage0-unit,arcane,vanilla,1,3.0356,0.0,3.0356,45,302.1,reproduced,accepted,0,0,0,0,True,
-stage0-unit,arcane,vanilla,2,2.9204,0.0,2.9204,37,242.7,reproduced,accepted,0,0,1,0,True,
+stage0-unit,arcane,vanilla,2,2.9204,0.0,2.9204,37,242.7,reproduced,accepted,0,0,1,0,True,"session limit hit after the finding was delivered and the source restored; run ended there, cost may be slightly understated"
 stage0-unit,arcane,vanilla,3,1.849,0.0,1.849,23,183.5,reproduced,accepted,0,0,0,0,True,
 stage0-unit,arcane,jev-unit,1,2.3829,0.0429,2.4258,31,267.5,reproduced,accepted,0,0,0,0,True,
 stage0-unit,arcane,jev-unit,2,2.357,0.0429,2.3999,35,274.8,reproduced,accepted,0,0,0,0,True,

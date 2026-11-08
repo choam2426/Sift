@@ -193,10 +193,22 @@ def parse_stream(path):
                 if block.get('type') == 'tool_use':
                     tools.append({'turn': assistant_turns, 'name': block.get('name'), 'input': block.get('input') or {}})
         if ev.get('type') == 'result':
-            results.append({k: ev.get(k) for k in ('subtype', 'is_error', 'total_cost_usd', 'duration_ms', 'num_turns', 'usage')})
+            results.append({k: ev.get(k) for k in ('subtype', 'is_error', 'total_cost_usd', 'duration_ms', 'num_turns', 'usage',
+                                                   'terminal_reason')} | {'result': str(ev.get('result') or '')[:500]})
     main = results[-1] if results else None
     costs = [r['total_cost_usd'] for r in results if isinstance(r.get('total_cost_usd'), (int, float))]
     return main, tools, sorted(models), max(costs) if costs else None, assistant_turns
+
+
+LIMIT = re.compile(r"hit your (session|usage|weekly) limit|rate limit|overloaded|credit balance", re.I)
+
+
+def infra_abort(main):
+    if main is None:
+        return 'no result event'
+    if main.get('terminal_reason') == 'api_error' or (main.get('is_error') and LIMIT.search(main.get('result') or '')):
+        return (main.get('result') or main.get('terminal_reason') or 'api error')[:200]
+    return None
 
 
 def first_touch(tools, rel):
@@ -242,7 +254,9 @@ def cmd_run(args):
            '--disallowedTools', 'Task', 'Agent']
     record = {'case': meta['case'], 'arm': meta['arm'], 'scope': meta['scope'], 'model_requested': args.model,
               'effort': args.effort, 'cap_usd': args.max_budget_usd, 'claude_cap_usd': round(claude_cap, 6),
-              'rank_cost_usd': rank_cost, 'claude_version': sh(['claude', '--version']).stdout.strip(),
+              'rank_cost_usd': rank_cost, 'ranking_seconds': meta['prepare'].get('ranking_seconds', 0.0),
+              'mutated_file_rank': meta['prepare'].get('mutated_file_rank'),
+              'claude_version': sh(['claude', '--version']).stdout.strip(),
               'started_at': now(), 'args': cmd[3:]}
     print(f'run {meta["case"]} arm={meta["arm"]} model={args.model} cap=${args.max_budget_usd} claude_cap=${claude_cap:.3f}', flush=True)
     t0 = time.monotonic()
@@ -252,6 +266,13 @@ def cmd_run(args):
     record['elapsed_seconds'] = round(time.monotonic() - t0, 1)
     record['exit_code'] = proc.returncode
     main, tools, models, claude_cost, turns = parse_stream(run_dir / 'stream.jsonl')
+    abort = infra_abort(main)
+    if abort:
+        # a session limit or API failure is not the agent's outcome; the run is redone
+        record.update({'result': main, 'claude_cost_usd': claude_cost, 'infra_abort': abort, 'valid': False})
+        (run_dir / 'run.json').write_text(json.dumps(record, indent=2) + '\n')
+        print(f'abort infra: {abort} claude=${claude_cost} record={run_dir / "run.json"}', flush=True)
+        return 3
     mut = case['mutation']['file']
     mention, read = first_touch(tools, mut)
     record.update({'result': main, 'claude_cost_usd': claude_cost, 'models_seen': models, 'tool_calls': len(tools),

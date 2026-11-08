@@ -10,7 +10,7 @@ Produces ~/sift-runs/planted/cases/<case>/:
   case.json
 The two trees differ only in the mutated file.
 """
-import argparse, json, pathlib, re, shutil, subprocess, sys, time
+import argparse, concurrent.futures, json, pathlib, re, shutil, subprocess, sys, time
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -118,7 +118,7 @@ def compile_fix(name, pkg):
     """Drop imports left unused by strip until the test package compiles."""
     for _ in range(10):
         p = dexec(name, 'go', 'test', '-count=1', '-run', '^$', './' + pkg, timeout=1800)
-        errs = re.findall(r'(?m)^(\S+_test\.go):\d+:\d+: "([^"]+)" imported and not used', p.stdout + p.stderr)
+        errs = re.findall(r'(?m)^(\S+_test\.go):\d+:\d+: "([^"]+)" imported (?:as \w+ )?and not used', p.stdout + p.stderr)
         if not errs:
             return p.returncode == 0, (p.stdout + p.stderr)[-2000:]
         by_file = {}
@@ -168,6 +168,24 @@ def importers(name, pkg):
     return me, sorted(out, key=lambda d: (d.split('/')[0] != top, d))
 
 
+def remove_artifacts(tree, pristine):
+    """Delete files and directories that tests created inside the tree."""
+    removed = []
+    for path in sorted(tree.rglob('*'), key=lambda p: len(p.parts)):
+        rel = path.relative_to(tree)
+        if rel.parts and rel.parts[0] == '.git':
+            continue
+        if not path.exists() and not path.is_symlink():
+            continue  # parent already removed
+        if not (pristine / rel).exists() and not (pristine / rel).is_symlink():
+            removed.append(str(rel))
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+    return removed
+
+
 def copy_tree(src, dst):
     if dst.exists():
         shutil.rmtree(dst)
@@ -214,8 +232,9 @@ def cmd_build(args):
             for round_ in range(3):
                 changed = False
                 for q in packages:
-                    rv = go_test(nv, q)
-                    rf = go_test(nf, q)
+                    with concurrent.futures.ThreadPoolExecutor(2) as ex:
+                        fv, ff = ex.submit(go_test, nv, q), ex.submit(go_test, nf, q)
+                        rv, rf = fv.result(), ff.result()
                     newly = sorted(failing(rv) - failing(rf))
                     report[q] = {'vuln': rv['status'], 'fix': rf['status'], 'vuln_fail': sorted(failing(rv)),
                                  'fix_fail': sorted(failing(rf)), 'detecting': newly}
@@ -237,6 +256,10 @@ def cmd_build(args):
                     break
             else:
                 raise SystemExit('detecting tests remain after 3 rounds')
+            pristine = DATA / 'src' / repo
+            removed = remove_artifacts(fix, pristine) + remove_artifacts(vuln, pristine)
+            if removed:
+                log(f'{args.case}: removed {len(removed)} files left by tests, e.g. {removed[:2]}')
             diff = sh(['diff', '-r', '-q', str(fix), str(vuln)]).stdout.strip().splitlines()
             if diff != [f'Files {fix}/{cand["file"]} and {vuln}/{cand["file"]} differ']:
                 raise SystemExit(f'trees differ beyond the mutated file: {diff[:5]}')
