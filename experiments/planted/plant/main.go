@@ -529,6 +529,9 @@ func apply(root, id string) (Candidate, error) {
 	if found == nil {
 		return Candidate{}, fmt.Errorf("candidate %s not found (source changed?)", id)
 	}
+	if parts[0] == "guard-delete" {
+		s, e = widenEmptyParent(rel, src, s, e)
+	}
 	if parts[0] == "scope-delete" {
 		// a lone keyed element keeps its trailing comma in the id range; drop it
 		before := strings.TrimRight(string(src[:s]), " \t\n")
@@ -552,6 +555,52 @@ func apply(root, id string) (Candidate, error) {
 		return Candidate{}, err
 	}
 	return *found, nil
+}
+
+// widenEmptyParent extends a guard deletion to an enclosing `if` whose body
+// would become empty, so the mutant does not show an empty block. The parent
+// must have no init, no else, and a call-free condition.
+func widenEmptyParent(rel string, src []byte, s, e int) (int, int) {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, rel, src, parser.ParseComments)
+	if err != nil {
+		return s, e
+	}
+	off := func(p token.Pos) int { return fset.Position(p).Offset }
+	for {
+		widened := false
+		ast.Inspect(f, func(n ast.Node) bool {
+			if widened {
+				return false
+			}
+			x, ok := n.(*ast.IfStmt)
+			if !ok || x.Init != nil || x.Else != nil || len(x.Body.List) != 1 {
+				return true
+			}
+			inner := x.Body.List[0]
+			if off(inner.Pos()) < s || off(inner.End()) > e || hasCall(x.Cond) {
+				return true
+			}
+			if ls, le, ok := lineRange(src, off(x.Pos()), off(x.End()), f, fset); ok && (ls < s || le > e) {
+				s, e, widened = ls, le, true
+			}
+			return !widened
+		})
+		if !widened {
+			return s, e
+		}
+	}
+}
+
+func hasCall(e ast.Expr) bool {
+	found := false
+	ast.Inspect(e, func(n ast.Node) bool {
+		if _, ok := n.(*ast.CallExpr); ok {
+			found = true
+		}
+		return !found
+	})
+	return found
 }
 
 type Removed struct {

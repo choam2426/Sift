@@ -58,6 +58,43 @@ func TestCandidates(t *testing.T) {
 	}
 }
 
+const nested = `package api
+
+func Sync(ctx *Context, required bool) error {
+	if ctx.Rev != "" {
+		// enforce override if enabled
+		if required {
+			if err := ctx.Enforce(ActionOverride); err != nil {
+				return err
+			}
+		}
+		log(ctx.Rev)
+	}
+	return nil
+}
+`
+
+func TestApplyRemovesEmptiedParent(t *testing.T) {
+	var id string
+	for _, c := range fileCandidates("api/api.go", []byte(nested)) {
+		if c.Op == "guard-delete" {
+			id = c.ID
+		}
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "api", "api.go")
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.WriteFile(path, []byte(nested), 0o644)
+	if _, err := apply(dir, id); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := os.ReadFile(path)
+	want := "\tif ctx.Rev != \"\" {\n\t\tlog(ctx.Rev)\n\t}\n"
+	if !strings.Contains(string(out), want) || strings.Contains(string(out), "required {") || strings.Contains(string(out), "enforce override") {
+		t.Fatalf("got:\n%s", out)
+	}
+}
+
 func TestApplyKeepsValidGo(t *testing.T) {
 	for _, c := range fileCandidates("api/api.go", []byte(fixture)) {
 		dir := t.TempDir()
