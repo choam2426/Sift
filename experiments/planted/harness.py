@@ -16,6 +16,7 @@ DATA = pathlib.Path('~/sift-runs/planted').expanduser()
 MODEL = 'claude-mythos-5-1'
 MODCACHE = 'sift-planted-modcache'
 TOP_K = 10
+FIXED_MTIME = 1793491200  # 2026-11-01T00:00:00Z
 ARMS = ('vanilla', 'rank-bm25', 'rank-jev')
 
 
@@ -38,8 +39,12 @@ def go_env(case):
 def volume_copy(src, dst):
     sh(['docker', 'volume', 'rm', '-f', dst])
     sh(['docker', 'volume', 'create', dst])
+    now = int(time.time())
+    # one recent mtime for every entry: hides which entries the case build added,
+    # and keeps Go from trimming entries older than 5 days
     p = sh(['docker', 'run', '--rm', '-v', f'{src}:/from:ro', '-v', f'{dst}:/to', 'alpine:3.20',
-            'sh', '-c', 'cp -a /from/. /to/ && chown -R 1000:1000 /to'])
+            'sh', '-c', f'cp -a /from/. /to/ && echo {now} > /to/trim.txt && find /to -depth -exec touch -h -c -d @{now} {{}} + '
+                        f'&& chown -R 1000:1000 /to'])
     if p.returncode:
         raise SystemExit(p.stderr)
 
@@ -122,6 +127,10 @@ def cmd_prepare(args):
     control.mkdir()
     src = agent / 'src' / case['repo']
     shutil.copytree(case['dir'] / 'vuln', src, symlinks=True)
+    # copy2 keeps mtimes, and the mutated and stripped files are newer than the rest;
+    # agents do sort files by mtime, so give every path one fixed time
+    for path in sorted(src.rglob('*'), key=lambda q: -len(q.parts)) + [src]:
+        os.utime(path, (FIXED_MTIME, FIXED_MTIME), follow_symlinks=False)
     prep = {'started_at': now()}
     t0 = time.monotonic()
     rank_stats = None

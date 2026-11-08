@@ -168,6 +168,43 @@ def importers(name, pkg):
     return me, sorted(out, key=lambda d: (d.split('/')[0] != top, d))
 
 
+def normalize_cache(vol):
+    """Give every cache entry one mtime (now) and mark the cache as just trimmed.
+
+    A uniform time hides which entries a case build added. It must be recent:
+    Go deletes entries unused for 5 days when it trims."""
+    now = int(time.time())
+    p = sh(['docker', 'run', '--rm', '-v', f'{vol}:/c', 'alpine:3.20', 'sh', '-c',
+            f'echo {now} > /c/trim.txt && find /c -depth -exec touch -h -c -d @{now} {{}} + && chown -R 1000:1000 /c'])
+    if p.returncode:
+        raise SystemExit(p.stderr)
+
+
+def agent_cache_for(repo, case_id, vuln):
+    """The agent's build cache: a fresh `go build ./...` of the case tree.
+
+    Built from scratch so no package has a second (pristine) entry, with no
+    test packages so `go list -test` staleness is uniform, and with one mtime."""
+    vol = f'sift-planted-agentcache-{case_id}'
+    sh(['docker', 'volume', 'rm', '-f', vol])
+    name = start(repo, vuln, f'sift-case-{case_id}-warm', vol)
+    try:
+        dexec(name, 'go', 'build', '-p', '6', './...', timeout=10800)
+    finally:
+        sh(['docker', 'rm', '-f', name])
+    normalize_cache(vol)
+    return vol
+
+
+def cmd_recache(args):
+    meta_path = DATA / 'cases' / args.case / 'case.json'
+    meta = json.loads(meta_path.read_text())
+    meta['agent_cache'] = agent_cache_for(meta['repo'], args.case, DATA / 'cases' / args.case / 'vuln')
+    meta['goflags'] = REPOS[meta['repo']].get('goflags', '-mod=mod')
+    meta_path.write_text(json.dumps(meta, indent=2) + '\n')
+    log(f'{args.case}: agent cache rebuilt')
+
+
 def remove_artifacts(tree, pristine):
     """Delete files and directories that tests created inside the tree."""
     removed = []
@@ -265,15 +302,8 @@ def cmd_build(args):
                 raise SystemExit(f'trees differ beyond the mutated file: {diff[:5]}')
             log(f'{args.case}: extracting units')
             units = units_for(nv, base_dir)
-            log(f'{args.case}: warming agent build cache')
-            agent_cache = f'sift-planted-agentcache-{args.case}'
-            sh(['docker', 'volume', 'rm', '-f', agent_cache])
-            nw = start(repo, vuln, f'sift-case-{args.case}-warm', agent_cache)
-            try:
-                dexec(nw, 'go', 'build', './...', timeout=7200)
-                dexec(nw, 'go', 'test', '-count=1', '-run', '^$', *['./' + q for q in packages], timeout=7200)
-            finally:
-                sh(['docker', 'rm', '-f', nw])
+            log(f'{args.case}: building agent cache')
+            agent_cache = agent_cache_for(repo, args.case, vuln)
         finally:
             sh(['docker', 'rm', '-f', nv])
     finally:
@@ -321,8 +351,10 @@ def main():
     p = sub.add_parser('build')
     p.add_argument('--repo', required=True); p.add_argument('--id', required=True); p.add_argument('--case', required=True)
     p.add_argument('--max-importers', type=int, default=60)
+    p = sub.add_parser('recache')
+    p.add_argument('--case', required=True)
     args = ap.parse_args()
-    return cmd_build(args)
+    return {'build': cmd_build, 'recache': cmd_recache}[args.cmd](args)
 
 
 if __name__ == '__main__':
