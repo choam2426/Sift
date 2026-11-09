@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline tests for the Phase 2 harness pieces (no Docker, model, or network)."""
-import pathlib, sys, tempfile, unittest
+import json, pathlib, sys, tempfile, unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import analyze
@@ -78,6 +78,15 @@ class InfraAbortTest(unittest.TestCase):
 
 
 class AnalyzeTest(unittest.TestCase):
+    def test_invalid_run_costs_the_cap(self):
+        d = pathlib.Path(tempfile.mkdtemp())
+        for i, (valid, cost) in enumerate(((True, 3.0), (False, 5.0))):
+            run = d / f'ws{i}' / 'control' / 'runs' / 't' / 'run.json'
+            run.parent.mkdir(parents=True)
+            run.write_text(json.dumps({'case': 'c', 'arm': 'vanilla', 'total_cost_usd': cost, 'valid': valid, 'cap_usd': 30.0}))
+        rows = sorted(analyze.load(str(d)), key=lambda r: r['cost'])
+        self.assertEqual([(r['cost'], r['raw_cost']) for r in rows], [(3.0, 3.0), (30.0, 5.0)])
+
     def test_ratio_uses_mean_cost_including_invalid_runs(self):
         cases = {'c1': {'vanilla': [{'cost': 4.0}, {'cost': 2.0}], 'rank-jev': [{'cost': 1.5}, {'cost': 1.5}]}}
         self.assertAlmostEqual(analyze.ratio(cases, 'rank-jev', 'vanilla')['c1'], 0.5)

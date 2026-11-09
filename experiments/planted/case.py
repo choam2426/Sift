@@ -82,6 +82,8 @@ def go_test(name, pkg, run=None, timeout=900):
             out.append(ev['Output'])
     text = ''.join(out) + p.stderr
     status = 'nocompile' if re.search(r'\[build failed\]|\[setup failed\]', text) else 'ran'
+    if 'test timed out' in text:
+        log(f'warn: {pkg} timed out; tests after the timeout were not checked')
     return {'status': status, 'tests': tests, 'tail': text[-3000:]}
 
 
@@ -159,8 +161,11 @@ def importers(name, pkg):
         if path == me or (parts[5] == '0' and parts[6] == '0'):
             continue
         rel = str(pathlib.PurePosixPath(parts[1]).relative_to('/src'))
-        if re.search(r'(^|/)(e2e|integration)(/|$)', rel):
-            continue  # need a cluster or a configured server; the agent cannot run them either
+        if re.search(r'(^|/)(e2e|integration|tests?)(/|$)', rel):
+            # whole-server integration suites (Grafana pkg/tests, Gitea tests/integration, Argo CD
+            # test/e2e): slow and flaky, and the same directories plant excludes from candidates.
+            # Agents could still run them; broker logs record whether they did.
+            continue
         test_imports = set(parts[3].split(',')) | set(parts[4].split(','))
         if me in deps[path] or me in test_imports or any(me in deps.get(t, ()) for t in test_imports):
             out.append(rel)
