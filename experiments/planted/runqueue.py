@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Pre-registered run order for the main experiment, and a runner for it.
 
-    python3 queue.py plan --reps 3            # print the order (deterministic)
-    python3 queue.py run --group main --reps 3 [--scope repo] [--cap 30]
+    python3 runqueue.py plan --reps 3            # print the order (deterministic)
+    python3 runqueue.py run --group main --reps 3 [--scope repo] [--cap 30]
 
 The order is block-randomized: block r holds every (case, arm) once for
 repetition r, shuffled with a seed derived from the block number, so time
