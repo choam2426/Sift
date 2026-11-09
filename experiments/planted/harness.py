@@ -187,7 +187,10 @@ def cmd_prepare(args):
 
 
 def parse_stream(path):
-    results, tools, models, assistant_turns = [], [], set(), 0
+    """A session can emit several result events (background tasks resume it).
+
+    Costs in result events are cumulative; turns are per segment and summed."""
+    results, tools, models, assistant_turns, limits = [], [], set(), 0, None
     for line in path.read_text(errors='replace').splitlines():
         try:
             ev = json.loads(line)
@@ -201,12 +204,26 @@ def parse_stream(path):
             for block in msg.get('content') or []:
                 if block.get('type') == 'tool_use':
                     tools.append({'turn': assistant_turns, 'name': block.get('name'), 'input': block.get('input') or {}})
+        if ev.get('type') == 'rate_limit_event':
+            limits = ev.get('rate_limit_info')
         if ev.get('type') == 'result':
             results.append({k: ev.get(k) for k in ('subtype', 'is_error', 'total_cost_usd', 'duration_ms', 'num_turns', 'usage',
                                                    'terminal_reason')} | {'result': str(ev.get('result') or '')[:500]})
     main = results[-1] if results else None
     costs = [r['total_cost_usd'] for r in results if isinstance(r.get('total_cost_usd'), (int, float))]
-    return main, tools, sorted(models), max(costs) if costs else None, assistant_turns
+    turns = sum(r.get('num_turns') or 0 for r in results)
+    return {'main': main, 'results': results, 'tools': tools, 'models': sorted(models),
+            'cost': max(costs) if costs else None, 'assistant_messages': assistant_turns, 'num_turns': turns,
+            'rate_limit': limits}
+
+
+def stream_fields(run_dir, case):
+    st = parse_stream(run_dir / 'stream.jsonl')
+    mention, read = first_touch(st['tools'], case['mutation']['file'])
+    return st, {'result': st['main'], 'result_segments': len(st['results']), 'claude_cost_usd': st['cost'],
+                'models_seen': st['models'], 'tool_calls': len(st['tools']), 'assistant_messages': st['assistant_messages'],
+                'num_turns': st['num_turns'], 'audit': audit(st['tools']), 'rate_limit': st['rate_limit'],
+                'mutated_first_mention_turn': mention, 'mutated_first_read_turn': read}
 
 
 LIMIT = re.compile(r"hit your (session|usage|weekly) limit|rate limit|overloaded|credit balance", re.I)
@@ -274,20 +291,18 @@ def cmd_run(args):
         proc.wait()
     record['elapsed_seconds'] = round(time.monotonic() - t0, 1)
     record['exit_code'] = proc.returncode
-    main, tools, models, claude_cost, turns = parse_stream(run_dir / 'stream.jsonl')
+    st, fields = stream_fields(run_dir, case)
+    main, claude_cost = st['main'], st['cost']
     abort = infra_abort(main)
     if abort:
         # a session limit or API failure is not the agent's outcome; the run is redone
-        record.update({'result': main, 'claude_cost_usd': claude_cost, 'infra_abort': abort, 'valid': False})
+        record.update(fields | {'infra_abort': abort, 'valid': False})
         (run_dir / 'run.json').write_text(json.dumps(record, indent=2) + '\n')
         print(f'abort infra: {abort} claude=${claude_cost} record={run_dir / "run.json"}', flush=True)
         return 3
-    mut = case['mutation']['file']
-    mention, read = first_touch(tools, mut)
-    record.update({'result': main, 'claude_cost_usd': claude_cost, 'models_seen': models, 'tool_calls': len(tools),
-                   'assistant_messages': turns, 'num_turns': (main or {}).get('num_turns'),
-                   'audit': audit(tools), 'mutated_first_mention_turn': mention, 'mutated_first_read_turn': read,
-                   'broker_calls': sum(1 for _ in (ws / 'control' / 'broker.jsonl').open()) if (ws / 'control' / 'broker.jsonl').exists() else 0})
+    read = fields['mutated_first_read_turn']
+    record.update(fields | {'broker_calls': sum(1 for _ in (ws / 'control' / 'broker.jsonl').open())
+                            if (ws / 'control' / 'broker.jsonl').exists() else 0})
     (run_dir / 'run.json').write_text(json.dumps(record, indent=2) + '\n')
     shutil.copytree(ws / 'agent' / 'findings', run_dir / 'findings')
     record = evaluate_run(ws, case, run_dir, record, args.max_budget_usd)
@@ -448,6 +463,19 @@ def cmd_evaluate(args):
     print(f'evaluated {run_json} technical={record["evaluation"]["verdict"]} valid={record["valid"]}')
 
 
+def cmd_reparse(args):
+    """Recompute stream-derived fields of a finished run without re-running tests."""
+    ws = pathlib.Path(args.workspace).expanduser().resolve()
+    meta = json.loads((ws / 'control' / 'workspace.json').read_text())
+    case = load_case(meta['case'])
+    for run_json in sorted((ws / 'control' / 'runs').glob('*/run.json')):
+        record = json.loads(run_json.read_text())
+        _, fields = stream_fields(run_json.parent, case)
+        record.update(fields)
+        run_json.write_text(json.dumps(record, indent=2) + '\n')
+        print(f'reparsed {run_json} turns={record["num_turns"]} segments={record["result_segments"]}')
+
+
 def cmd_teardown(args):
     ws = pathlib.Path(args.workspace).expanduser().resolve()
     meta = json.loads((ws / 'control' / 'workspace.json').read_text())
@@ -468,9 +496,11 @@ def main():
     p = sub.add_parser('run'); p.add_argument('--workspace', required=True); p.add_argument('--model', default=MODEL)
     p.add_argument('--effort', default='high'); p.add_argument('--max-budget-usd', type=float, default=30.0)
     p = sub.add_parser('evaluate'); p.add_argument('--workspace', required=True); p.add_argument('--run')
+    p = sub.add_parser('reparse'); p.add_argument('--workspace', required=True)
     p = sub.add_parser('teardown'); p.add_argument('--workspace', required=True)
     args = ap.parse_args()
-    return {'prepare': cmd_prepare, 'run': cmd_run, 'evaluate': cmd_evaluate, 'teardown': cmd_teardown}[args.cmd](args)
+    return {'prepare': cmd_prepare, 'run': cmd_run, 'evaluate': cmd_evaluate, 'reparse': cmd_reparse,
+            'teardown': cmd_teardown}[args.cmd](args)
 
 
 if __name__ == '__main__':
