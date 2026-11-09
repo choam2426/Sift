@@ -87,6 +87,15 @@ class AnalyzeTest(unittest.TestCase):
         rows = sorted(analyze.load(str(d)), key=lambda r: r['cost'])
         self.assertEqual([(r['cost'], r['raw_cost']) for r in rows], [(3.0, 3.0), (30.0, 5.0)])
 
+    def test_unchecked_test_runs(self):
+        d = pathlib.Path(tempfile.mkdtemp())
+        run = d / 'control' / 'runs' / 't' / 'run.json'
+        run.parent.mkdir(parents=True)
+        lines = [['test', './pkg/api', '-run', 'TestX'], ['test', './pkg/tests/api/alerting'], ['test', './...'],
+                 ['exec', 'ls', 'tests/'], ['build', './...']]
+        (d / 'control' / 'broker.jsonl').write_text(''.join(json.dumps({'argv': a}) + '\n' for a in lines))
+        self.assertEqual(analyze.unchecked_test_runs(run), 2)
+
     def test_ratio_uses_mean_cost_including_invalid_runs(self):
         cases = {'c1': {'vanilla': [{'cost': 4.0}, {'cost': 2.0}], 'rank-jev': [{'cost': 1.5}, {'cost': 1.5}]}}
         self.assertAlmostEqual(analyze.ratio(cases, 'rank-jev', 'vanilla')['c1'], 0.5)

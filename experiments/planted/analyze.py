@@ -11,7 +11,7 @@ over its runs. Ratios are per case; the summary is their geometric mean with a
 bootstrap 95% CI that resamples repositories (cases in a repository move
 together). Raw mean all-in cost is reported as a secondary measure.
 """
-import argparse, csv, glob, json, math, os, pathlib, random, statistics, sys
+import argparse, csv, glob, json, math, os, pathlib, random, re, statistics, sys
 
 DATA = pathlib.Path('~/sift-runs/planted').expanduser()
 BOOT = 10000
@@ -28,8 +28,24 @@ def load(root):
         rows.append({'case': r['case'], 'arm': r['arm'], 'raw_cost': r['total_cost_usd'],
                      'cost': r['total_cost_usd'] if valid else r['cap_usd'], 'valid': valid,
                      'turns': r.get('num_turns'), 'wall': (r.get('elapsed_seconds') or 0) + (r.get('ranking_seconds') or 0),
-                     'first_read': r.get('mutated_first_read_turn'), 'path': path})
+                     'first_read': r.get('mutated_first_read_turn'), 'unchecked_tests': unchecked_test_runs(path),
+                     'path': path})
     return rows
+
+
+UNCHECKED = re.compile(r'(^|/)(e2e|integration|tests?)(/|$)|\.\.\.')
+
+
+def unchecked_test_runs(run_json):
+    """Broker test commands that reach packages the case build did not check."""
+    log = pathlib.Path(run_json).parents[2] / 'broker.jsonl'
+    n = 0
+    if log.exists():
+        for line in log.read_text().splitlines():
+            argv = json.loads(line).get('argv') or []
+            if argv[:1] == ['test'] and any(UNCHECKED.search(a) for a in argv[1:] if not a.startswith('-')):
+                n += 1
+    return n
 
 
 def case_meta(case):
@@ -152,12 +168,13 @@ def main():
         if rs:
             valid = sum(r['valid'] for r in rs)
             total = sum(r['raw_cost'] for r in rs)
+            print(f"- {arm}: runs reaching unchecked test packages {sum(r['unchecked_tests'] > 0 for r in rs)}/{len(rs)}")
             print(f"- {arm}: valid {valid}/{len(rs)}, all-in cost per valid finding "
                   f"{'$%.3f' % (total / valid) if valid else 'n/a'}")
 
     if args.csv:
         with open(args.csv, 'w', newline='') as f:
-            w = csv.DictWriter(f, fieldnames=['case', 'repo', 'units', 'arm', 'cost', 'raw_cost', 'valid', 'turns', 'wall', 'first_read'])
+            w = csv.DictWriter(f, fieldnames=['case', 'repo', 'units', 'arm', 'cost', 'raw_cost', 'valid', 'turns', 'wall', 'first_read', 'unchecked_tests'])
             w.writeheader()
             for r in rows:
                 w.writerow({k: r.get(k) for k in w.fieldnames} | {'repo': repo_of[r['case']], 'units': units_of[r['case']]})
