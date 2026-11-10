@@ -1,6 +1,8 @@
 # Phase 2: 심은 인가 결함 실험
 
-[ADR 0010](../../docs/adr/0010-phase2-planted-defects.md)의 구현이다. 학습 기준일 이후 리비전에 인가 검사 하나를 지운 사례를 만들고, `vanilla` / `rank-bm25` / `rank-jev` 세 arm으로 에이전트의 탐색 비용을 비교한다.
+> **상태: 파일럿에서 종료(2026-11-09).** 본 실험은 실행하지 않았다. 누출 수정 후 Jev·BM25 결과가 없으므로 이 실험으로 Jev 효과를 주장하지 않는다. 종료 결정과 파일럿 결과는 [ADR 0011](../../docs/adr/0011-stop-phase2-after-pilot.md)에 있다.
+
+[ADR 0010](../../docs/adr/0010-phase2-planted-defects.md)의 구현이다. 학습 기준일 이후 리비전에 인가 검사 하나를 지운 사례를 만들고, `vanilla` / `rank-bm25` / `rank-jev` 세 arm으로 에이전트의 탐색 비용을 비교하도록 설계했다.
 
 ## 구성
 
@@ -17,7 +19,17 @@
 | `analyze.py` | H1~H3 분석. 사례별 비용 비율의 기하평균과 저장소 단위 bootstrap CI |
 | `test_planted.py`, `plant/main_test.go` | 오프라인 테스트. 모델·Docker·네트워크를 부르지 않는다 |
 
-원자료는 저장소 밖 `~/sift-runs/planted/`에 둔다(`src/`, `pool/`, `cases/`, `runs/`).
+원자료는 저장소 밖 `~/sift-runs/planted/`에 둔다(`src/`, `pool/`, `cases/`, `runs/`). 생성한 13개 본 사례와 실행 원자료는 후속 연구를 위해 보존하지만, `runqueue.py run`을 활성 실험으로 실행하지 않는다.
+
+## DeepSeek runner (별도 파일럿)
+
+`pi_harness.py`와 `pi_runner/agent_ext.ts`는 Pi + `ollama-cloud/deepseek-v4.1-flash:1017`으로 같은 사례를 실행한다. `bash`는 broker를 거쳐 케이스 컨테이너에서만 돌고, 파일 도구는 workspace 밖으로 나가지 못한다. 주 지표는 달러가 아니라 모델 토큰이다.
+
+별도 파일럿 결과는 [ADR 0012](../../docs/adr/0012-deepseek-v41-flash-planted-study.md)에 있다. Argo CD는 Mythos와 맞춘 토큰 상한에서 valid였지만, Gitea는 심은 결함이 아닌 다른 실제 결함을 찾아 topdir 판정을 통과하지 못했다. 이 runner로 본 실험은 시작하지 않았다.
+
+## 종료 시점
+
+mtime 누출을 고친 뒤의 `vanilla` 파일럿은 저장소 전체 범위에서 1/3, 최상위 디렉터리 범위에서 1/2 valid였다. 남은 Argo CD 최상위 디렉터리 파일럿 전에 종료했다. 수정 후 `rank-jev`·`rank-bm25`와 본 사례 실행은 0회다. 아래 절차는 재현과 구현 이해를 위한 기록이며, 종료한 큐를 계속하라는 지침이 아니다.
 
 ## 절차
 

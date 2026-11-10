@@ -1,6 +1,6 @@
 # Sift 연구 설계
 
-> **연구 종료(2026-11-08).** 이 문서는 2026-10-19 시점의 설계 기록이다. 이후 비교 설계는 `vanilla` vs `vanilla + Jev package` 2-arm으로 바뀌었고([제품 결정 메모](docs/jev-package-decision-memo.md)), 최종 결론은 [ADR 0009](docs/adr/0009-conclude-research-after-stage-0.md)에 있다.
+> **연구 종료(2026-11-09).** 이 문서는 2026-10-19 시점의 설계 기록이다. 이후 비교 설계는 `vanilla` vs `vanilla + Jev package` 2-arm으로 바뀌었고([제품 결정 메모](docs/jev-package-decision-memo.md)), Phase 1 결론은 [ADR 0009](docs/adr/0009-conclude-research-after-stage-0.md)에 있다. 심은 결함으로 독립 검증하려던 후속 Phase 2는 Jev 효과를 측정하기 전에 파일럿에서 종료했다([ADR 0011](docs/adr/0011-stop-phase2-after-pilot.md)). 같은 사례로 DeepSeek v4.1 Flash + Pi runner도 시험했으나, Gitea에서 심은 결함이 아닌 다른 실제 결함이 나와 파일럿에서 종료했다([ADR 0012](docs/adr/0012-deepseek-v41-flash-planted-study.md)). 보안 byproduct의 제보·PR 상태는 [ADR 0013](docs/adr/0013-sift-closeout-and-byproducts.md)에 정리했다.
 
 2026-10-19 기준 설계 기록. 합의의 이유와 범위는 [ADR 0001](docs/adr/0001-jev-collaboration-research-charter.md)과 [ADR 0006](docs/adr/0006-logic-bug-ranker-experiment.md)에 기록한다. 아직 정하지 않은 방법·제품 형태는 여기서 요구사항으로 만들지 않는다.
 

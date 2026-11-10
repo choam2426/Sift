@@ -6,6 +6,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import analyze
 import case as case_mod
 import harness
+import pi_harness
 import rank
 
 
@@ -75,6 +76,49 @@ class InfraAbortTest(unittest.TestCase):
     def test_budget_stop_is_not(self):
         # hitting --max-budget-usd is the agent's outcome under the cap, not an infra failure
         self.assertIsNone(harness.infra_abort({'is_error': True, 'subtype': 'error_max_budget_usd', 'terminal_reason': 'budget_exhausted', 'result': 'None'}))
+
+
+class PiRunnerTest(unittest.TestCase):
+    def test_usage_and_tools_are_summed(self):
+        d = pathlib.Path(tempfile.mkdtemp())
+        events = [
+            {'type': 'message_end', 'message': {'role': 'assistant', 'model': 'm', 'stopReason': 'toolUse',
+                                                'usage': {'input': 10, 'output': 2, 'cacheRead': 3, 'cacheWrite': 0,
+                                                          'reasoning': 0, 'totalTokens': 15}}},
+            {'type': 'tool_execution_start', 'toolName': 'bash', 'args': {'command': 'ls'}},
+            {'type': 'message_end', 'message': {'role': 'assistant', 'model': 'm', 'stopReason': 'stop',
+                                                'usage': {'input': 4, 'output': 1, 'cacheRead': 5, 'cacheWrite': 0,
+                                                          'reasoning': 0, 'totalTokens': 10}}},
+        ]
+        (d / 'stream.jsonl').write_text(''.join(json.dumps(e) + '\n' for e in events))
+        st = pi_harness.parse_stream(d / 'stream.jsonl')
+        self.assertEqual(st['num_turns'], 2)
+        self.assertEqual(st['usage']['totalTokens'], 25)
+        self.assertEqual(st['tool_calls'][0]['turn'], 1)
+        self.assertEqual(st['models'], ['m'])
+
+    def test_session_limit_is_infra_abort(self):
+        d = pathlib.Path(tempfile.mkdtemp())
+        events = [{'type': 'message_end', 'message': {'role': 'assistant', 'stopReason': 'error',
+                                                       'errorMessage': "You've hit your session limit",
+                                                       'usage': {'totalTokens': 1}}}]
+        (d / 'stream.jsonl').write_text(''.join(json.dumps(e) + '\n' for e in events))
+        st = pi_harness.parse_stream(d / 'stream.jsonl')
+        self.assertIn('session limit', harness.infra_abort(st['main']))
+
+    def test_collect_findings_merges_both_views(self):
+        ws = pathlib.Path(tempfile.mkdtemp())
+        case = {'repo': 'repo'}
+        (ws / 'agent' / 'findings').mkdir(parents=True)
+        (ws / 'agent' / 'findings' / 'host.txt').write_text('host')
+        src = ws / 'agent' / 'src' / 'repo' / 'findings'
+        src.mkdir(parents=True)
+        (src / 'container.txt').write_text('container')
+        run = ws / 'run'
+        run.mkdir()
+        pi_harness.collect_findings(ws, case, run)
+        self.assertEqual((run / 'findings' / 'host.txt').read_text(), 'host')
+        self.assertEqual((run / 'findings' / 'container.txt').read_text(), 'container')
 
 
 class AnalyzeTest(unittest.TestCase):
